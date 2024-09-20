@@ -30,7 +30,7 @@ class Config(dict):
     GENERATE_SCHEMAS: bool
     APP_BUILD: str
 
-    def load_environment_variables(self, load_env="GPT_ORCHESTRATOR_") -> None:
+    def load_environment_variables(self, load_env="ACTIVE_BOOST_") -> None:
         """
         Any environment variables defined with the prefix argument will be applied to the config.
         Args:
