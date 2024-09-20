@@ -5,10 +5,10 @@ from sanic_security.authentication import (
     create_initial_admin_account,
     attach_refresh_encoder,
 )
-from sanic_security.configuration import config
 from tortoise.contrib.sanic import register_tortoise
 
 from active_boost.blueprints.view import api, api_models
+from active_boost.common.util import config
 
 app = Sanic("active_boost")
 app.blueprint(api)
