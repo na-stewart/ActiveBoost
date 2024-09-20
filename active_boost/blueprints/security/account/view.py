@@ -1,0 +1,125 @@
+from argon2 import PasswordHasher
+from sanic import Blueprint
+from sanic_security.authentication import (
+    requires_authentication,
+    validate_email,
+    validate_username,
+    validate_password,
+)
+from sanic_security.authorization import require_permissions, assign_role
+from sanic_security.models import Account, Role
+from sanic_security.utils import json
+
+account_bp = Blueprint("account")
+password_hasher = PasswordHasher()
+
+account_bp.static(
+    "/dashboard/account",
+    "gpt_orchestrator/static/dashboard/account.html",
+    name="dashboard_account",
+)
+account_bp.static(
+    "/dashboard/profile",
+    "gpt_orchestrator/static/dashboard/profile.html",
+    name="dashboard_profile",
+)
+
+
+@account_bp.get("account")
+@requires_authentication
+async def on_account_get(request):
+    return json("Account retrieved.", request.ctx.authentication_session.bearer.json)
+
+
+@account_bp.get("account/all")
+@require_permissions("account:get")
+async def on_account_get_all(request):
+    accounts = await Account.filter(deleted=False).all()
+    return json("Accounts retrieved.", [account.json for account in accounts])
+
+
+@account_bp.post("account")
+@require_permissions("account:post")
+async def on_account_create(request):
+    account = await Account.create(
+        email=validate_email(request.form.get("email")),
+        username=validate_username(request.form.get("username")),
+        password=password_hasher.hash(validate_password(request.form.get("password"))),
+        verified=request.form.get("verified") is not None,
+        disabled=request.form.get("disabled") is not None,
+    )
+    return json("Account created.", account.json)
+
+
+@account_bp.delete("account")
+@require_permissions("account:delete")
+async def on_account_delete(request):
+    account = await Account.get(id=request.args.get("id"))
+    account.deleted = True
+    await account.save(update_fields=["deleted"])
+    return json("Account deleted.", account.json)
+
+
+@account_bp.get("account/roles")
+@require_permissions("account:role")
+async def on_account_role_get(request):
+    account = await Account.get(id=request.args.get("id")).prefetch_related("roles")
+    return json("Account roles retrieved.", [role.json for role in account.roles])
+
+
+@account_bp.post("account/roles")
+@require_permissions("account:role")
+async def on_account_role_assign(request):
+    account = await Account.get(id=request.args.get("account"))
+    await assign_role(request.args.get("id"), account)
+    return json("Account role assigned.", account.json)
+
+
+@account_bp.delete("account/roles")
+@require_permissions("account:role")
+async def on_account_role_remove(request):
+    role = await Role.get(name=request.args.get("role"))
+    account = await Account.get(id=request.args.get("id"))
+    await account.roles.remove(role)
+    return json("Account role removed.", account.json)
+
+
+@account_bp.put("account")
+@require_permissions("account:put")
+async def on_account_update(request):
+    account = await Account.get(id=request.args.get("id"))
+    account.username = validate_username(request.form.get("username"))
+    account.email = validate_email(request.form.get("email"))
+    account.disabled = request.form.get("disabled") is not None
+    account.verified = request.form.get("verified") is not None
+    if request.form.get("password"):
+        account.password = password_hasher.hash(
+            validate_password(request.form.get("password"))
+        )
+    await account.save(
+        update_fields=["username", "email", "password", "disabled", "verified"]
+    )
+    return json("Account updated.", account.json)
+
+
+@account_bp.delete("account/my")
+@requires_authentication
+async def on_my_account_delete(request):
+    account = request.ctx.authentication_session.bearer
+    account.deleted = True
+    await account.save(update_fields=["deleted"])
+    return json("Account deleted.", account.json)
+
+
+@account_bp.put("account/my")
+@requires_authentication
+async def on_my_account_update(request):
+    account = request.ctx.authentication_session.bearer
+    account.username = request.form.get("username")
+    account.email = request.form.get("email")
+    if request.form.get("password"):
+        account.password = password_hasher.hash(
+            validate_password(request.form.get("password"))
+        )
+    await account.save(update_fields=["username", "email", "password"])
+    return json("Account updated.", account.json)
