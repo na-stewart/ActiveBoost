@@ -12,10 +12,6 @@ class BaseModel(Model):
     date_updated: datetime.datetime = fields.DatetimeField(auto_now=True)
     deleted: bool = fields.BooleanField(default=False)
 
-    async def delete(self, **kwargs):
-        self.deleted = True
-        await self.save(update_fields=["deleted"])
-
     @property
     def json(self) -> dict:
         raise NotImplementedError()
