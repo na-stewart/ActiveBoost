@@ -73,7 +73,7 @@ class Group(BaseModel):
         request: Request, permissions: str
     ) -> AuthenticationSession:
         return await check_permissions(
-            request, f"group-{request.args.get("group")}:{per}"
+            request, f"group-{request.args.get("group")}:{permissions}"
         )
 
     @property

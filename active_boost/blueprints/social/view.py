@@ -20,7 +20,7 @@ async def on_create_challenge(request):
     )
     group = await Group.get(
         id=request.args.get("group"), disbanded=False, deleted=False
-    ).get()
+    )
     challenge = await Challenge.create(
         title=request.form.get("title"),
         description=request.form.get("description"),
@@ -85,7 +85,7 @@ async def on_disband_group(request):
     await Group.check_group_user_permissions(request, "disband")
     group = await Group.get(
         id=request.args.get("group"), disbanded=False, deleted=False
-    ).get()
+    )
     group.disbanded = True
     await group.save(update_fields=["disbanded"])
     return json("Group disbanded.", group.json)
@@ -105,7 +105,7 @@ async def on_create_group_permission(request):
     await Group.check_group_user_permissions(request, "perms")
     group = await Group.get(
         id=request.args.get("group"), disbanded=False, deleted=False
-    ).get()
+    )
     role = await Role.create(
         name=request.form.get("name"),
         permissions=f"group-{group.id}:{request.form.get("perms")}",
@@ -119,7 +119,7 @@ async def on_get_group_permissions(request):
     await Group.check_group_user_permissions(request, "perms")
     group = await Group.get(
         id=request.args.get("group"), disbanded=False, deleted=False
-    ).get()
+    )
     roles = await Role.filter(
         permissions__startswith=f"group-{group.id}", deleted=False
     ).all()
@@ -149,7 +149,7 @@ async def on_prohibit_group_user(request):
     await Group.check_group_user_permissions(request, "perms")
     group = await Group.get(
         id=request.args.get("group"), disbanded=False, deleted=False
-    ).get()
+    )
     account_being_permitted = await Account.get(
         id=request.args.get("account"), deleted=False
     )
