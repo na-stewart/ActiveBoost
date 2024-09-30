@@ -1,6 +1,8 @@
 import datetime
 
-from sanic_security.models import Account
+from sanic import Request
+from sanic_security.authorization import check_permissions
+from sanic_security.models import Account, AuthenticationSession
 from tortoise import fields
 
 from active_boost.common.models import BaseModel
@@ -58,7 +60,7 @@ class Group(BaseModel):
     )
 
     @classmethod
-    async def get_all_from_member(cls, account: Account):
+    async def get_from_member(cls, account: Account):
         """
         Retrieve all challenges that account is participating in.
         """
@@ -66,16 +68,12 @@ class Group(BaseModel):
             members__in=[account], deleted=False, disbanded=False
         ).all()
 
-    @classmethod
-    async def get_from_member(cls, account: Account, gr_id: int):
-        """
-        Retrieve group via id only if the account is included in the group.
-        """
-        return await cls.get(
-            id=gr_id,
-            members__in=[account],
-            disbanded=False,
-            deleted=False,
+    @staticmethod
+    async def check_group_user_permissions(
+        request: Request, permissions: str
+    ) -> AuthenticationSession:
+        return await check_permissions(
+            request, f"group-{request.args.get("group")}:{per}"
         )
 
     @property
