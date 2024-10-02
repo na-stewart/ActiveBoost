@@ -22,6 +22,20 @@ class Challenge(BaseModel):
         "models.Account", through="challenge_participant"
     )
 
+    @staticmethod
+    async def get_queryset_from_group(request: Request):
+        """
+        Create all global challenges not created by a user.
+        """
+        group = (
+            await Group.filter(
+                id=request.args.get("group"), disbanded=False, deleted=False
+            )
+            .prefetch_related("challenges")
+            .first()
+        )
+        return group, group.challenges
+
     @classmethod
     async def get_global(cls):
         """
@@ -34,14 +48,16 @@ class Challenge(BaseModel):
         """
         Retrieve all challenges created by the challenger.
         """
-        return await cls.filter(challenger=account, deleted=False).all()
+        return await cls.filter(challenger=account, active=True, deleted=False).all()
 
     @classmethod
     async def get_from_participant(cls, account: Account):
         """
         Retrieve all challenges that account is participating in.
         """
-        return await cls.filter(participants__in=[account], deleted=False).all()
+        return await cls.filter(
+            participants__in=[account], active=True, deleted=False
+        ).all()
 
 
 class Group(BaseModel):
