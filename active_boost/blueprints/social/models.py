@@ -23,13 +23,16 @@ class Challenge(BaseModel):
     )
 
     @staticmethod
-    async def get_queryset_from_group(request: Request):
+    async def get_queryset_from_group(request: Request, account: Account):
         """
         Create all global challenges not created by a user.
         """
         group = (
             await Group.filter(
-                id=request.args.get("group"), disbanded=False, deleted=False
+                id=request.args.get("group"),
+                members__in=[account],
+                disbanded=False,
+                deleted=False,
             )
             .prefetch_related("challenges")
             .first()
