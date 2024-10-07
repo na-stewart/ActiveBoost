@@ -5,12 +5,6 @@ from sanic_security.utils import json
 
 roles_bp = Blueprint("Role")
 
-roles_bp.static(
-    "/dashboard/roles",
-    "gpt_orchestrator/static/dashboard/roles.html",
-    name="dashboard_roles",
-)
-
 
 @roles_bp.post("role")
 @require_permissions("role:create")

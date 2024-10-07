@@ -13,17 +13,6 @@ from sanic_security.utils import json
 account_bp = Blueprint("account")
 password_hasher = PasswordHasher()
 
-account_bp.static(
-    "/dashboard/account",
-    "gpt_orchestrator/static/dashboard/account.html",
-    name="dashboard_account",
-)
-account_bp.static(
-    "/dashboard/profile",
-    "gpt_orchestrator/static/dashboard/profile.html",
-    name="dashboard_profile",
-)
-
 
 @account_bp.get("account")
 @requires_authentication

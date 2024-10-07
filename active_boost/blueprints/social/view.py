@@ -65,7 +65,17 @@ async def on_update_group(request):
     return json("Group updated.", group.json)
 
 
-@social_bp.put("group/disband")
+@social_bp.post("groups/join")
+@requires_authentication
+async def on_join_group(request):
+    group = await Group.get(
+        id=request.args.get("group"), disbanded=False, deleted=False
+    )
+    await group.members.add(request.ctx.authentication_session.bearer)
+    return json("You have joined this group!", group.json)
+
+
+@social_bp.put("groups/disband")
 async def on_disband_group(request):
     await Group.check_group_user_permissions(request, "update")
     group = await Group.get(
@@ -76,7 +86,7 @@ async def on_disband_group(request):
     return json("Group disbanded.", group.json)
 
 
-@social_bp.delete("group")
+@social_bp.delete("groups")
 @require_permissions("group:delete")
 async def on_delete_group(request):
     group = await Group.get(id=request.args.get("group"), deleted=False)
@@ -85,7 +95,7 @@ async def on_delete_group(request):
     return json("Group deleted.", group.json)
 
 
-@social_bp.post("group/role")
+@social_bp.post("groups/role")
 async def on_create_group_prole(request):
     await Group.check_group_user_permissions(request, "roles")
     group = await Group.get(
@@ -99,7 +109,7 @@ async def on_create_group_prole(request):
     return json("Group role created.", role.json)
 
 
-@social_bp.get("group/role")
+@social_bp.get("groups/role")
 async def on_get_group_roles(request):
     await Group.check_group_user_permissions(request, "roles")
     group = await Group.get(
@@ -111,7 +121,7 @@ async def on_get_group_roles(request):
     return json("Group roles retrieved.", [role.json for role in roles])
 
 
-@social_bp.post("group/role/assign")
+@social_bp.post("groups/role/assign")
 async def on_permit_group_user(request):
     await Group.check_group_user_permissions(request, "perms")
     group = await Group.get(
@@ -129,7 +139,7 @@ async def on_permit_group_user(request):
     return json("Group participant assigned role.", role.json)
 
 
-@social_bp.delete("group/role/prohibit")
+@social_bp.delete("groups/role/prohibit")
 async def on_prohibit_group_user(request):
     await Group.check_group_user_permissions(request, "perms")
     group = await Group.get(

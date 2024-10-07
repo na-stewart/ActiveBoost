@@ -4,13 +4,6 @@ from sanic_security.utils import json
 
 security_bp = Blueprint("security")
 
-security_bp.static(
-    "/login", "gpt_orchestrator/static/auth/index.html", name="auth_index"
-)
-security_bp.static(
-    "/register", "gpt_orchestrator/static/auth/register.html", name="auth_register"
-)
-
 
 @security_bp.post("/register")
 async def on_register(request):

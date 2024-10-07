@@ -16,10 +16,11 @@ class Challenge(BaseModel):
     active: bool = fields.BooleanField(default=True)
     expiration_date: datetime.datetime = fields.DatetimeField()
     challenger: fields.ForeignKeyRelation["Account"] = fields.ForeignKeyField(
-        "models.Account", null=True
-    )  # If null, challenge is global. When created for group, set to group founder.
+        "models.Account", null=True, related_name="challenged_by"
+    )
     participants: fields.ManyToManyRelation["Account"] = fields.ManyToManyField(
-        "models.Account", through="challenge_participant"
+        "models.Account",
+        through="challenge_participant",
     )
 
     @staticmethod
@@ -67,12 +68,12 @@ class Group(BaseModel):
     title: str = fields.CharField(unique=True, max_length=225)
     description: str = fields.TextField()
     private: bool = fields.BooleanField()
-    disbanded: bool = fields.BooleanField()
+    disbanded: bool = fields.BooleanField(default=False)
     founder: fields.ForeignKeyRelation["Account"] = fields.ForeignKeyField(
         "models.Account"
     )
     members: fields.ManyToManyRelation["Account"] = fields.ManyToManyField(
-        "models.Account", through="group_member"
+        "models.Account", through="group_member", related_name="memberships"
     )
     challenges: fields.ManyToManyRelation["Challenge"] = fields.ManyToManyField(
         "models.Challenge", through="group_challenge"

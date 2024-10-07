@@ -7,7 +7,7 @@ from active_boost.common.models import Config
 config = Config(
     {
         "DEBUG": True,
-        "DATABASE_URL": "sqlite://:memory:",
+        "DATABASE_URL": "sqlite://db.sqlite3",
         "GENERATE_SCHEMAS": True,
         "APP_BUILD": "0.0.1",
     }
