@@ -8,75 +8,15 @@ from tortoise import fields
 from active_boost.common.models import BaseModel
 
 
-class Challenge(BaseModel):
-    title: str = fields.CharField(unique=True, max_length=225)
-    description: str = fields.TextField()
-    prize: int = fields.IntField()
-    threshold = fields.IntField()  # Distance, steps, heartrate, etc.
-    active: bool = fields.BooleanField(default=True)
-    expiration_date: datetime.datetime = fields.DatetimeField()
-    challenger: fields.ForeignKeyRelation["Account"] = fields.ForeignKeyField(
-        "models.Account", null=True, related_name="challenged_by"
-    )
-    participants: fields.ManyToManyRelation["Account"] = fields.ManyToManyField(
-        "models.Account",
-        through="challenge_participant",
-    )
-
-    @staticmethod
-    async def get_queryset_from_group(request: Request, account: Account):
-        """
-        Create all global challenges not created by a user.
-        """
-        group = (
-            await Group.filter(
-                id=request.args.get("group"),
-                members__in=[account],
-                disbanded=False,
-                deleted=False,
-            )
-            .prefetch_related("challenges")
-            .first()
-        )
-        return group, group.challenges
-
-    @classmethod
-    async def get_global(cls):
-        """
-        Create all global challenges not created by a user.
-        """
-        return await cls.filter(challenger=None, deleted=False).all()
-
-    @classmethod
-    async def get_from_challenger(cls, account: Account):
-        """
-        Retrieve all challenges created by the challenger.
-        """
-        return await cls.filter(challenger=account, active=True, deleted=False).all()
-
-    @classmethod
-    async def get_from_participant(cls, account: Account):
-        """
-        Retrieve all challenges that account is participating in.
-        """
-        return await cls.filter(
-            participants__in=[account], active=True, deleted=False
-        ).all()
-
-
 class Group(BaseModel):
     title: str = fields.CharField(unique=True, max_length=225)
     description: str = fields.TextField()
     private: bool = fields.BooleanField()
-    disbanded: bool = fields.BooleanField(default=False)
     founder: fields.ForeignKeyRelation["Account"] = fields.ForeignKeyField(
         "models.Account"
     )
     members: fields.ManyToManyRelation["Account"] = fields.ManyToManyField(
         "models.Account", through="group_member", related_name="memberships"
-    )
-    challenges: fields.ManyToManyRelation["Challenge"] = fields.ManyToManyField(
-        "models.Challenge", through="group_challenge"
     )
 
     @classmethod
@@ -93,7 +33,7 @@ class Group(BaseModel):
         request: Request, permissions: str
     ) -> AuthenticationSession:
         return await check_permissions(
-            request, f"group-{request.args.get("group")}:{permissions}"
+            request, f"group-{request.args.get("id")}:{permissions}"
         )
 
     @property
@@ -103,8 +43,74 @@ class Group(BaseModel):
             "title": self.title,
             "description": self.description,
             "private": self.private,
-            "disbanded": self.disbanded,
             "founder": (
                 self.founder.username if isinstance(self.founder, Account) else None
             ),
         }
+
+
+class Challenge(BaseModel):
+    title: str = fields.CharField(unique=True, max_length=225)
+    description: str = fields.TextField()
+    prize: int = fields.IntField()
+    threshold = fields.IntField()  # Distance, steps, heartrate, etc.
+    expiration_date: datetime.datetime = fields.DatetimeField()
+    challenger: fields.ForeignKeyRelation["Account"] = fields.ForeignKeyField(
+        "models.Account", null=True, related_name="challenged_by"
+    )
+    group: fields.ForeignKeyRelation["Group"] = fields.ForeignKeyField(
+        "models.Group", null=True
+    )
+    participants: fields.ManyToManyRelation["Account"] = fields.ManyToManyField(
+        "models.Account",
+        through="challenge_participant",
+    )
+    finishers: fields.ManyToManyRelation["Account"] = fields.ManyToManyField(
+        "models.Account", through="challenge_finisher", related_name="finisher"
+    )
+
+    @classmethod
+    async def get_from_challenger(cls, account: Account):
+        """
+        Retrieve all challenges created by the challenger.
+        """
+        return await cls.filter(challenger=account, deleted=False).all()
+
+    @classmethod
+    async def get_all_from_participant(cls, account: Account):
+        """
+        Retrieve all challenges that account is participating in.
+        """
+        return await cls.filter(participants__in=[account], deleted=False).all()
+
+    @classmethod
+    async def get_all_from_group(cls, request: Request):
+        """
+        Retrieve all challenges that account is participating in.
+        """
+        return await cls.filter(
+            group=request.args.get("id"),
+            deleted=False,
+        ).all()
+
+    @classmethod
+    async def get_from_group(cls, request: Request):
+        """
+        Retrieve all challenges that account is participating in.
+        """
+        return await Challenge.get(
+            id=request.args.get("challenge"),
+            group=request.args.get("id"),
+            deleted=False,
+        )
+
+    @classmethod
+    async def get_from_participant(cls, request: Request, account: Account):
+        """
+        Retrieve all challenges that account is participating in.
+        """
+        return await cls.get(
+            id=request.args.get("id"),
+            participants__in=[account],
+            deleted=False,
+        )

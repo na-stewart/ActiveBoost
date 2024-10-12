@@ -1,7 +1,6 @@
 from sanic import Blueprint
 from sanic_security.authentication import requires_authentication
 from sanic_security.authorization import (
-    require_permissions,
     assign_role,
 )
 from sanic_security.models import Account, Role
@@ -20,16 +19,9 @@ async def on_get_user_groups(request):
     return [group.json for group in groups]
 
 
-@social_bp.get("groups/all")
-@require_permissions("groups:get")
-async def on_get_all_groups(request):
-    groups = await Group.filter(deleted=False).all()
-    return [group.json for group in groups]
-
-
-@social_bp.get("groups/all/public")
+@social_bp.get("groups")
 async def on_get_all_public_groups(request):
-    groups = await Group.filter(deleted=False, disbanded=False, private=False).all()
+    groups = await Group.filter(deleted=False, private=False).all()
     return [group.json for group in groups]
 
 
@@ -55,9 +47,7 @@ async def on_create_group(request):
 @social_bp.put("groups")
 async def on_update_group(request):
     await Group.check_group_user_permissions(request, "update")
-    group = await Group.get(
-        id=request.args.get("group"), disbanded=False, deleted=False
-    )
+    group = await Group.get(id=request.args.get("id"), deleted=False)
     group.title = request.form.get("title")
     group.description = request.form.get("description")
     group.private = str_to_bool(request.form.get("private"))
@@ -65,45 +55,30 @@ async def on_update_group(request):
     return json("Group updated.", group.json)
 
 
-@social_bp.post("groups/join")
-@requires_authentication
-async def on_join_group(request):
-    group = await Group.get(
-        id=request.args.get("group"), disbanded=False, deleted=False
-    )
-    await group.members.add(request.ctx.authentication_session.bearer)
-    return json("You have joined this group!", group.json)
-
-
-@social_bp.put("groups/disband")
-async def on_disband_group(request):
-    await Group.check_group_user_permissions(request, "update")
-    group = await Group.get(
-        id=request.args.get("group"), disbanded=False, deleted=False
-    )
-    group.disbanded = True
+@social_bp.delete("groups")
+async def on_delete_group(request):
+    await Group.check_group_user_permissions(request, "delete")
+    group = await Group.get(id=request.args.get("id"), deleted=False)
+    group.deleted = True
     await group.save(update_fields=["disbanded"])
     return json("Group disbanded.", group.json)
 
 
-@social_bp.delete("groups")
-@require_permissions("group:delete")
-async def on_delete_group(request):
-    group = await Group.get(id=request.args.get("group"), deleted=False)
-    group.deleted = True
-    await group.save(update_fields=["deleted"])
-    return json("Group deleted.", group.json)
+@social_bp.put("groups/join")
+@requires_authentication
+async def on_join_group(request):
+    group = await Group.get(id=request.args.get("id"), deleted=False)
+    await group.members.add(request.ctx.authentication_session.bearer)
+    return json("You have joined this group!", group.json)
 
 
 @social_bp.post("groups/role")
-async def on_create_group_prole(request):
+async def on_create_group_role(request):
     await Group.check_group_user_permissions(request, "roles")
-    group = await Group.get(
-        id=request.args.get("group"), disbanded=False, deleted=False
-    )
+    group = await Group.get(id=request.args.get("id"), deleted=False)
     role = await Role.create(
         name=request.form.get("name"),
-        permissions=f"group-{group.id}:{request.form.get("perms")}",
+        permissions=f"group-{group.id}:{request.form.get("permissions")}",
         description=request.form.get("description"),
     )
     return json("Group role created.", role.json)
@@ -112,21 +87,17 @@ async def on_create_group_prole(request):
 @social_bp.get("groups/role")
 async def on_get_group_roles(request):
     await Group.check_group_user_permissions(request, "roles")
-    group = await Group.get(
-        id=request.args.get("group"), disbanded=False, deleted=False
-    )
+    group = await Group.get(id=request.args.get("id"), deleted=False)
     roles = await Role.filter(
         permissions__startswith=f"group-{group.id}", deleted=False
     ).all()
     return json("Group roles retrieved.", [role.json for role in roles])
 
 
-@social_bp.post("groups/role/assign")
+@social_bp.put("groups/role/assign")
 async def on_permit_group_user(request):
     await Group.check_group_user_permissions(request, "perms")
-    group = await Group.get(
-        id=request.args.get("group"), disbanded=False, deleted=False
-    )
+    group = await Group.get(id=request.args.get("id"), deleted=False)
     account_being_permitted = await Account.get(
         id=request.args.get("account"), deleted=False
     )
@@ -139,12 +110,10 @@ async def on_permit_group_user(request):
     return json("Group participant assigned role.", role.json)
 
 
-@social_bp.delete("groups/role/prohibit")
+@social_bp.put("groups/role/prohibit")
 async def on_prohibit_group_user(request):
     await Group.check_group_user_permissions(request, "perms")
-    group = await Group.get(
-        id=request.args.get("group"), disbanded=False, deleted=False
-    )
+    group = await Group.get(id=request.args.get("id"), deleted=False)
     account_being_permitted = await Account.get(
         id=request.args.get("account"), deleted=False
     )
@@ -157,14 +126,7 @@ async def on_prohibit_group_user(request):
     return json("Group participant role removed.", role.json)
 
 
-@social_bp.get("challenges")
-@require_permissions("challenges:get")
-async def on_get_all_challenges(request):
-    challenges = await Challenge.filter(deleted=False).all()
-    return [challenge.json for challenge in challenges]
-
-
-@social_bp.get("challenges/you")
+@social_bp.get("group/challenges/you")
 @requires_authentication
 async def on_get_user_challenges(request):
     challenges = await Challenge.get_from_participant(
@@ -173,21 +135,17 @@ async def on_get_user_challenges(request):
     return [challenge.json for challenge in challenges]
 
 
-@social_bp.get("challenges/group")
+@social_bp.get("groups/challenges")
 @requires_authentication
 async def on_get_group_challenges(request):
-    group, challenges_queryset = await Challenge.get_queryset_from_group(request)
-    challenges = await challenges_queryset.filter(deleted=False, active=True).all()
+    challenges = await Challenge.get_all_from_group(request)
     return [challenge.json for challenge in challenges]
 
 
-@social_bp.post("challenges")
+@social_bp.post("groups/challenges")
 async def on_create_challenge(request):
     authentication_session = await Group.check_group_user_permissions(
         request, "challenges"
-    )
-    group = await Group.get(
-        id=request.args.get("group"), disbanded=False, deleted=False
     )
     challenge = await Challenge.create(
         title=request.form.get("title"),
@@ -198,18 +156,15 @@ async def on_create_challenge(request):
             request.form.get("expiration-date")
         ),  # Change later.
         challenger=authentication_session.bearer,
+        group=request.args.get("id"),
     )
-    await group.challenges.add(challenge)
     return json("Challenge created.", challenge.json)
 
 
-@social_bp.put("challenge")
+@social_bp.put("groups/challenges")
 async def on_update_challenge(request):
     await Group.check_group_user_permissions(request, "challenges")
-    group, challenges_queryset = await Challenge.get_queryset_from_group(request)
-    challenge = challenges_queryset.get(
-        id=request.args.get("challenge"), deleted=False, active=True
-    )
+    challenge = await Challenge.get_from_group(request)
     challenge.title = request.form.get("title")
     challenge.description = request.form.get("description")
     challenge.prize = request.form.get("prize")
@@ -229,22 +184,10 @@ async def on_update_challenge(request):
     return json("Challenge updated.", challenge.json)
 
 
-@social_bp.put("groups/deactivate")
-async def on_deactivate_challenge(request):
-    await Group.check_group_user_permissions(request, "challenges")
-    group, challenges_queryset = await Challenge.get_queryset_from_group(request)
-    challenge = await challenges_queryset.get(
-        id=request.args.get("challenge"), deleted=False, active=True
-    )
-    challenge.active = False
-    await challenge.save(update_fields="active")
-    return json("Challenge deactivated.", challenge.json)
-
-
-@social_bp.delete("challenges")
-@require_permissions("challenges:delete")
+@social_bp.delete("groups/challenges")
 async def on_delete_challenge(request):
-    challenge = await Challenge.get(id=request.args.get("group"), deleted=False)
-    challenge.deleted = True
-    await challenge.save(update_fields=["deleted"])
+    await Group.check_group_user_permissions(request, "challenges")
+    challenge = await Challenge.get_from_group(request)
+    challenge.delete = True
+    await challenge.save(update_fields="delete")
     return json("Challenge deleted.", challenge.json)

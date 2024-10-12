@@ -2,12 +2,15 @@ from sanic import Blueprint
 from sanic_security.authentication import login, logout, register
 from sanic_security.utils import json
 
+from active_boost.blueprints.security.account.models import Profile
+
 security_bp = Blueprint("security")
 
 
 @security_bp.post("/register")
 async def on_register(request):
     account = await register(request, verified=True)
+    await Profile.create(account=account)
     response = json("Registration successful! Verification required.", account.json)
     return response
 
