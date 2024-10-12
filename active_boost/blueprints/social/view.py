@@ -15,14 +15,24 @@ social_bp = Blueprint("social")
 @social_bp.get("groups/you")
 @requires_authentication
 async def on_get_user_groups(request):
-    groups = await Group.get_from_member(request.ctx.authentication_session.bearer)
-    return [group.json for group in groups]
+    groups = await Group.get_all_from_member(request.ctx.authentication_session.bearer)
+    return json("User groups retrieved", [group.json for group in groups])
 
 
 @social_bp.get("groups")
 async def on_get_all_public_groups(request):
     groups = await Group.filter(deleted=False, private=False).all()
-    return [group.json for group in groups]
+    return json("Public groups retrieved", [group.json for group in groups])
+
+
+@social_bp.get("groups/members")
+@requires_authentication
+async def on_get_group_members(request):
+    group = await Group.get_from_member(
+        request, request.ctx.authentication_session.bearer
+    )
+    members = await group.members.filter(deleted=False).all()
+    return json("Group members retrieved", [member.json for member in members])
 
 
 @social_bp.post("groups")
@@ -74,7 +84,7 @@ async def on_delete_group(request):
     group = await Group.get(id=request.args.get("id"), deleted=False)
     group.deleted = True
     await group.save(update_fields=["disbanded"])
-    return json("Group disbanded.", group.json)
+    return json("Group deleted.", group.json)
 
 
 @social_bp.put("groups/join")
@@ -82,15 +92,14 @@ async def on_delete_group(request):
 async def on_join_group(request):
     group = await Group.get(id=request.args.get("id"), deleted=False)
     await group.members.add(request.ctx.authentication_session.bearer)
-    return json("You have joined this group!", group.json)
+    return json("Group joined.", group.json)
 
 
 @social_bp.get("groups/role")
 async def on_get_group_roles(request):
     await Group.check_group_user_permissions(request, "group")
-    group = await Group.get(id=request.args.get("id"), deleted=False)
     roles = await Role.filter(
-        permissions__startswith=f"group-{group.id}", deleted=False
+        permissions__startswith=f"group-{request.args.get("id")}", deleted=False
     ).all()
     return json("Group roles retrieved.", [role.json for role in roles])
 
@@ -128,17 +137,36 @@ async def on_prohibit_group_user(request):
 @social_bp.get("group/challenges/you")
 @requires_authentication
 async def on_get_user_challenges(request):
-    challenges = await Challenge.get_from_participant(
+    challenges = await Challenge.get_all_from_participant(
         request.ctx.authentication_session.bearer
     )
-    return [challenge.json for challenge in challenges]
+    return json(
+        "User challenges retrieved.", [challenge.json for challenge in challenges]
+    )
 
 
 @social_bp.get("groups/challenges")
 @requires_authentication
 async def on_get_group_challenges(request):
     challenges = await Challenge.get_all_from_group(request)
-    return [challenge.json for challenge in challenges]
+    return json(
+        "Group challenges retrieved.", [challenge.json for challenge in challenges]
+    )
+
+
+@social_bp.get("groups/challenges/participants")
+@requires_authentication
+async def on_get_group_challenge_participants(request):
+    challenge = await Challenge.get_from_group(request)
+    participants = await challenge.participants.filter(deleted=False).all()
+    finishers = await challenge.participants.filter(deleted=False).all()
+    return json(
+        "Challenge participants retrieved.",
+        {
+            "participants": [participant.json for participant in participants],
+            "finishers": [finisher.json for finisher in finishers],
+        },
+    )
 
 
 @social_bp.post("groups/challenges")

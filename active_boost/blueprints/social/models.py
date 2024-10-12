@@ -20,13 +20,25 @@ class Group(BaseModel):
     )
 
     @classmethod
-    async def get_from_member(cls, account: Account):
+    async def get_all_from_member(cls, account: Account):
         """
         Retrieve all challenges that account is participating in.
         """
         return await cls.filter(
             members__in=[account], deleted=False, disbanded=False
         ).all()
+
+    @classmethod
+    async def get_from_member(cls, request: Request, account: Account):
+        """
+        Retrieve all challenges that account is participating in.
+        """
+        return await cls.get(
+            id=request.args.get("id"),
+            members__in=[account],
+            deleted=False,
+            disbanded=False,
+        )
 
     @staticmethod
     async def check_group_user_permissions(
@@ -46,6 +58,7 @@ class Group(BaseModel):
             "founder": (
                 self.founder.username if isinstance(self.founder, Account) else None
             ),
+            "members": self.members,
         }
 
 
@@ -84,6 +97,17 @@ class Challenge(BaseModel):
         return await cls.filter(participants__in=[account], deleted=False).all()
 
     @classmethod
+    async def get_from_participant(cls, request: Request, account: Account):
+        """
+        Retrieve all challenges that account is participating in.
+        """
+        return await cls.get(
+            id=request.args.get("id"),
+            participants__in=[account],
+            deleted=False,
+        )
+
+    @classmethod
     async def get_all_from_group(cls, request: Request):
         """
         Retrieve all challenges that account is participating in.
@@ -101,16 +125,5 @@ class Challenge(BaseModel):
         return await Challenge.get(
             id=request.args.get("challenge"),
             group=request.args.get("id"),
-            deleted=False,
-        )
-
-    @classmethod
-    async def get_from_participant(cls, request: Request, account: Account):
-        """
-        Retrieve all challenges that account is participating in.
-        """
-        return await cls.get(
-            id=request.args.get("id"),
-            participants__in=[account],
             deleted=False,
         )
