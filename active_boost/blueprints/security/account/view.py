@@ -2,12 +2,8 @@ from argon2 import PasswordHasher
 from sanic import Blueprint
 from sanic_security.authentication import (
     requires_authentication,
-    validate_email,
-    validate_username,
     validate_password,
 )
-from sanic_security.authorization import require_permissions, assign_role
-from sanic_security.models import Account, Role
 from sanic_security.utils import json
 
 from active_boost.blueprints.security.account.models import Profile

@@ -30,6 +30,7 @@ class Profile(BaseModel):
             "id": self.id,
             "pfp_url": self.pfp_url,
             "balance": self.balance,
+            "bio": self.bio,
             "account": (
                 self.account.username if isinstance(self.account, Account) else None
             ),
