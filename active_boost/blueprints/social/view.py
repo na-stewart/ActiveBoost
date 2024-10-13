@@ -35,7 +35,30 @@ async def on_get_group_members(request):
         request, request.ctx.authentication_session.bearer
     )
     members = await group.members.filter(deleted=False).all()
-    return json("Group members retrieved", [member.json for member in members])
+    response_array = []
+    for member in members:
+        group_balance = 0
+        challenges = await Challenge.get_all_from_group(request)
+        for challenge in challenges:
+            if await challenge.participants.filter(
+                member.id
+            ).exists():  # Has member participated in the challenge?
+                if await challenge.finishers.filter(
+                    id=member.id
+                ).exists():  # Has member completed the challenge?
+                    group_balance += challenge.reward
+                elif challenge.has_expired():
+                    group_balance -= challenge.penalty
+        profile = await Profile.get_from_account(member)
+        response_array.append(
+            {
+                "account": member.username,
+                "profile": profile.json,
+                "group_balance": group_balance,
+            }
+        )
+
+    return json("Group members retrieved", response_array)
 
 
 @social_bp.post("groups")
@@ -96,21 +119,6 @@ async def on_join_group(request):
     group = await Group.get(id=request.args.get("id"), deleted=False)
     await group.members.add(request.ctx.authentication_session.bearer)
     return json("Group joined.", group.json)
-
-
-@social_bp.get("groups/balance")
-@requires_authentication
-async def on_get_user_group_balance(request):
-    total_group_balance = 0
-    challenges = await Challenge.get_all_from_group(request, request.args.get("id"))
-    for challenge in challenges:
-        if await challenge.finishers.filter(
-            id=request.ctx.authentication_session.bearer.id
-        ).exists():
-            total_group_balance += challenge.reward
-        elif challenge.has_expired():
-            total_group_balance -= challenge.penalty
-    return json("Group balance retrieved.", total_group_balance)
 
 
 @social_bp.get("groups/role")
