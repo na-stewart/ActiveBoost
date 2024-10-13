@@ -31,22 +31,23 @@ class Group(BaseModel):
         )
 
     @classmethod
-    async def get_from_member(cls, request: Request, account: Account):
+    async def get_from_member(cls, request: Request, account: Account, cls_id=None):
         """
         Retrieve all challenges that account is participating in.
         """
         return await cls.get(
-            id=request.args.get("id"),
+            id=cls_id if cls_id else request.args.get("id"),
             members__in=[account],
             deleted=False,
         )
 
     @staticmethod
     async def check_group_user_permissions(
-        request: Request, permissions: str
+        request: Request, permissions: str, group_id=None
     ) -> AuthenticationSession:
         return await check_permissions(
-            request, f"group-{request.args.get("id")}:{permissions}"
+            request,
+            f"group-{group_id if group_id else request.args.get("id") }:{permissions}",
         )
 
     @property
@@ -94,6 +95,7 @@ class Challenge(BaseModel):
             "penalty": self.penalty,
             "completion_threshold": self.threshold,
             "threshold_type": self.threshold_type,
+            "expiration_date": str(self.expiration_date),
             "group": self.group.title if isinstance(self.group, Group) else None,
         }
 
@@ -112,7 +114,7 @@ class Challenge(BaseModel):
         """
         Retrieve all challenges that account is participating in.
         """
-        return await cls.filter(participants__in=[account], deleted=False).all()
+        return await cls.filter(participants__in=[account.id], deleted=False).all()
 
     @classmethod
     async def get_from_participant(cls, request: Request, account: Account):
@@ -131,7 +133,7 @@ class Challenge(BaseModel):
         Retrieve all challenges that account is participating in.
         """
         return await cls.filter(
-            group=request.args.get("id"),
+            group=request.args.get("group"),
             deleted=False,
         ).all()
 
@@ -141,7 +143,7 @@ class Challenge(BaseModel):
         Retrieve all challenges that account is participating in.
         """
         return await Challenge.get(
-            id=request.args.get("challenge"),
-            group=request.args.get("id"),
+            id=request.args.get("id"),
+            group=request.args.get("group"),
             deleted=False,
         )

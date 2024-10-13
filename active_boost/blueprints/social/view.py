@@ -9,7 +9,7 @@ from sanic_security.models import Account, Role
 
 from active_boost.blueprints.security.account.models import Profile
 from active_boost.blueprints.social.models import Group, Challenge
-from active_boost.common.exceptions import ThresholdNotMetError
+from active_boost.common.exceptions import ThresholdNotMetError, ChallengeExpiredError
 from active_boost.common.util import json, str_to_bool
 
 social_bp = Blueprint("social")
@@ -137,7 +137,7 @@ async def on_prohibit_group_user(request):
     return json("Group participant role removed.", role.json)
 
 
-@social_bp.get("groups/challenges/you")
+@social_bp.get("challenges/you")
 @requires_authentication
 async def on_get_user_challenges(request):
     challenges = await Challenge.get_all_from_participant(
@@ -148,7 +148,7 @@ async def on_get_user_challenges(request):
     )
 
 
-@social_bp.get("groups/challenges")
+@social_bp.get("challenges")
 @requires_authentication
 async def on_get_group_challenges(request):
     challenges = await Challenge.get_all_from_group(request)
@@ -157,7 +157,7 @@ async def on_get_group_challenges(request):
     )
 
 
-@social_bp.get("groups/challenges/participants")
+@social_bp.get("challenges/participants")
 @requires_authentication
 async def on_get_group_challenge_participants(request):
     challenge = await Challenge.get_from_group(request)
@@ -172,12 +172,14 @@ async def on_get_group_challenge_participants(request):
     )
 
 
-@social_bp.post("groups/challenges")
+@social_bp.post("challenges")
 async def on_create_challenge(request):
     authentication_session = await Group.check_group_user_permissions(
-        request, "challenges"
+        request, "challenges", request.args.get("group")
     )
-    group = await Group.get_from_member(request, authentication_session.bearer)
+    group = await Group.get_from_member(
+        request, authentication_session.bearer, request.args.get("group")
+    )
     challenge = await Challenge.create(
         title=request.form.get("title"),
         description=request.form.get("description"),
@@ -189,14 +191,16 @@ async def on_create_challenge(request):
             request.form.get("expiration-date"), "%Y-%m-%d %H:%M:%S"
         ),
         challenger=authentication_session.bearer,
-        group=group
+        group=group,
     )
     return json("Challenge created.", challenge.json)
 
 
-@social_bp.put("groups/challenges")
+@social_bp.put("challenges")
 async def on_update_challenge(request):
-    await Group.check_group_user_permissions(request, "challenges")
+    await Group.check_group_user_permissions(
+        request, "challenges", request.args.get("group")
+    )
     challenge = await Challenge.get_from_group(request)
     challenge.title = request.form.get("title")
     challenge.description = request.form.get("description")
@@ -215,35 +219,51 @@ async def on_update_challenge(request):
             "threshold",
             "expiration_date",
             "penalty",
-            "threshold_type"
+            "threshold_type",
         ]
     )
     return json("Challenge updated.", challenge.json)
 
 
-@social_bp.delete("groups/challenges")
+@social_bp.delete("challenges")
 async def on_delete_challenge(request):
-    await Group.check_group_user_permissions(request, "challenges")
+    await Group.check_group_user_permissions(
+        request, "challenges", request.args.get("group")
+    )
     challenge = await Challenge.get_from_group(request)
     challenge.delete = True
     await challenge.save(update_fields="delete")
     return json("Challenge deleted.", challenge.json)
 
 
-@social_bp.put("groups/challenges/redeem")
-async def on_challenge_redeem(request):
-    await Group.check_group_user_permissions(request, "challenges")
+@social_bp.put("challenges/join")
+@requires_authentication
+async def on_join_challenge(request):
     challenge = await Challenge.get_from_group(request)
+    await challenge.participants.add(request.ctx.authentication_session.bearer)
+    return json("Challenge joined", challenge.json)
+
+
+@social_bp.put("challenges/redeem")
+@requires_authentication
+async def on_challenge_redeem(request):
+    challenge = await Challenge.get_from_participant(
+        request, request.ctx.authentication_session.bearer
+    )
     if challenge.has_expired():
-        challenge.participants.remove(request.ctx.authentication_session.bearer)
-        profile = await Profile.get_from_account(challenge)
-        profile.update_balance(-challenge.penalty)
+        await challenge.participants.remove(request.ctx.authentication_session.bearer)
+        profile = await Profile.get_from_account(
+            request.ctx.authentication_session.bearer
+        )
+        await profile.update_balance(-challenge.penalty)
+        raise ChallengeExpiredError()
     elif request.args.get("threshold-attempt") > challenge.threshold:
-        challenge.participants.remove(request.ctx.authentication_session.bearer)
-        challenge.finishers.add(request.ctx.authentication_session.bearer)
-        profile = await Profile.get_from_account(challenge)
+        await challenge.participants.remove(request.ctx.authentication_session.bearer)
+        await challenge.finishers.add(request.ctx.authentication_session.bearer)
+        profile = await Profile.get_from_account(
+            request.ctx.authentication_session.bearer
+        )
         await profile.update_balance(challenge.reward)
+        return json("Challenge redeemed.", challenge.json)
     else:
-        raise ThresholdNotMetError
-    await challenge.save(update_fields="delete")
-    return json("Challenge deleted.", challenge.json)
+        raise ThresholdNotMetError()
