@@ -10,24 +10,17 @@ class Profile(BaseModel):
     )
     pfp_url: str = fields.CharField(max_length=255, null=True)
     bio: str = fields.TextField(null=True)
-    balance: int = fields.IntField(default=0)
 
     @classmethod
     async def get_from_account(cls, account: Account):
         profile = await cls.get(account=account, deleted=False)
         return profile
 
-    async def update_balance(self, adjustment: int):
-        self.balance += adjustment
-        await self.save(update_fields=["balance"])
-        return self
-
     @property
     def json(self) -> dict:
         return {
             "id": self.id,
             "pfp_url": self.pfp_url,
-            "balance": self.balance,
             "bio": self.bio,
             "account": (
                 self.account.username if isinstance(self.account, Account) else None

@@ -98,6 +98,21 @@ async def on_join_group(request):
     return json("Group joined.", group.json)
 
 
+@social_bp.get("groups/balance")
+@requires_authentication
+async def on_get_user_group_balance(request):
+    total_group_balance = 0
+    challenges = await Challenge.get_all_from_group(request, request.args.get("id"))
+    for challenge in challenges:
+        if await challenge.finishers.filter(
+            id=request.ctx.authentication_session.bearer.id
+        ).exists():
+            total_group_balance += challenge.reward
+        elif challenge.has_expired():
+            total_group_balance -= challenge.penalty
+    return json("Group balance retrieved.", total_group_balance)
+
+
 @social_bp.get("groups/role")
 async def on_get_group_roles(request):
     await Group.check_group_user_permissions(request, "group")
@@ -251,19 +266,9 @@ async def on_challenge_redeem(request):
         request, request.ctx.authentication_session.bearer
     )
     if challenge.has_expired():
-        await challenge.participants.remove(request.ctx.authentication_session.bearer)
-        profile = await Profile.get_from_account(
-            request.ctx.authentication_session.bearer
-        )
-        await profile.update_balance(-challenge.penalty)
         raise ChallengeExpiredError()
     elif request.args.get("threshold-attempt") > challenge.threshold:
-        await challenge.participants.remove(request.ctx.authentication_session.bearer)
         await challenge.finishers.add(request.ctx.authentication_session.bearer)
-        profile = await Profile.get_from_account(
-            request.ctx.authentication_session.bearer
-        )
-        await profile.update_balance(challenge.reward)
         return json("Challenge redeemed.", challenge.json)
     else:
         raise ThresholdNotMetError()

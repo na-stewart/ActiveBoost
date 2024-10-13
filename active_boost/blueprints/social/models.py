@@ -128,12 +128,12 @@ class Challenge(BaseModel):
         )
 
     @classmethod
-    async def get_all_from_group(cls, request: Request):
+    async def get_all_from_group(cls, request: Request, group_id=None):
         """
         Retrieve all challenges that account is participating in.
         """
         return await cls.filter(
-            group=request.args.get("group"),
+            group=group_id if group_id else request.args.get("group"),
             deleted=False,
         ).all()
 
