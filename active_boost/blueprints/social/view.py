@@ -6,7 +6,6 @@ from sanic_security.authorization import (
     assign_role,
 )
 from sanic_security.models import Account, Role
-from sanic_security.utils import get_expiration_date
 
 from active_boost.blueprints.security.account.models import Profile
 from active_boost.blueprints.social.models import Group, Challenge
@@ -138,7 +137,7 @@ async def on_prohibit_group_user(request):
     return json("Group participant role removed.", role.json)
 
 
-@social_bp.get("group/challenges/you")
+@social_bp.get("groups/challenges/you")
 @requires_authentication
 async def on_get_user_challenges(request):
     challenges = await Challenge.get_all_from_participant(
@@ -178,16 +177,19 @@ async def on_create_challenge(request):
     authentication_session = await Group.check_group_user_permissions(
         request, "challenges"
     )
+    group = await Group.get_from_member(request, authentication_session.bearer)
     challenge = await Challenge.create(
         title=request.form.get("title"),
         description=request.form.get("description"),
-        prize=request.form.get("prize"),
+        reward=request.form.get("reward"),
+        penalty=request.form.get("penalty"),
         threshold=request.form.get("threshold"),
+        threshold_type=request.form.get("threshold-type"),
         expiration_date=datetime.datetime.strptime(
             request.form.get("expiration-date"), "%Y-%m-%d %H:%M:%S"
         ),
         challenger=authentication_session.bearer,
-        group=request.args.get("id"),
+        group=group
     )
     return json("Challenge created.", challenge.json)
 
@@ -198,18 +200,22 @@ async def on_update_challenge(request):
     challenge = await Challenge.get_from_group(request)
     challenge.title = request.form.get("title")
     challenge.description = request.form.get("description")
-    challenge.prize = request.form.get("prize")
+    challenge.reward = request.form.get("reward")
+    challenge.penalty = request.form.get("penalty")
     challenge.threshold = request.form.get("threshold")
-    challenge.expiration_date = (
-        get_expiration_date(request.form.get("expiration-date")),
-    )  # Change later.
+    challenge.threshold_type = request.form.get("threshold-type")
+    challenge.expiration_date = datetime.datetime.strptime(
+        request.form.get("expiration-date"), "%Y-%m-%d %H:%M:%S"
+    )
     await challenge.save(
         update_fields=[
             "title",
             "description",
-            "prize",
+            "reward",
             "threshold",
             "expiration_date",
+            "penalty",
+            "threshold_type"
         ]
     )
     return json("Challenge updated.", challenge.json)
@@ -236,7 +242,7 @@ async def on_challenge_redeem(request):
         challenge.participants.remove(request.ctx.authentication_session.bearer)
         challenge.finishers.add(request.ctx.authentication_session.bearer)
         profile = await Profile.get_from_account(challenge)
-        await profile.update_balance(challenge.prize)
+        await profile.update_balance(challenge.reward)
     else:
         raise ThresholdNotMetError
     await challenge.save(update_fields="delete")

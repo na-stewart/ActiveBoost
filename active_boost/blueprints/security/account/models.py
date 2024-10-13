@@ -10,7 +10,7 @@ class Profile(BaseModel):
     )
     pfp_url: str = fields.CharField(max_length=255, null=True)
     bio: str = fields.TextField(null=True)
-    balance: int = fields.IntField()
+    balance: int = fields.IntField(default=0)
 
     @classmethod
     async def get_from_account(cls, account: Account):

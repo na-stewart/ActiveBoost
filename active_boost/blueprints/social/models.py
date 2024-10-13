@@ -24,9 +24,11 @@ class Group(BaseModel):
         """
         Retrieve all challenges that account is participating in.
         """
-        return await cls.filter(
-            members__in=[account], deleted=False, disbanded=False
-        ).all()
+        return (
+            await cls.filter(members__in=[account], deleted=False)
+            .prefetch_related("members")
+            .all()
+        )
 
     @classmethod
     async def get_from_member(cls, request: Request, account: Account):
@@ -37,7 +39,6 @@ class Group(BaseModel):
             id=request.args.get("id"),
             members__in=[account],
             deleted=False,
-            disbanded=False,
         )
 
     @staticmethod
@@ -58,14 +59,13 @@ class Group(BaseModel):
             "founder": (
                 self.founder.username if isinstance(self.founder, Account) else None
             ),
-            "members": self.members,
         }
 
 
 class Challenge(BaseModel):
     title: str = fields.CharField(unique=True, max_length=225)
     description: str = fields.TextField()
-    prize: int = fields.IntField()
+    reward: int = fields.IntField()
     penalty: int = fields.IntField()
     threshold = fields.IntField()  # Distance, steps, heartrate, etc.
     threshold_type = fields.CharField(max_length=255)
@@ -83,6 +83,19 @@ class Challenge(BaseModel):
     finishers: fields.ManyToManyRelation["Account"] = fields.ManyToManyField(
         "models.Account", through="challenge_finisher", related_name="finisher"
     )
+
+    @property
+    def json(self) -> dict:
+        return {
+            "id": self.id,
+            "title": self.title,
+            "description": self.description,
+            "reward": self.reward,
+            "penalty": self.penalty,
+            "completion_threshold": self.threshold,
+            "threshold_type": self.threshold_type,
+            "group": self.group.title if isinstance(self.group, Group) else None,
+        }
 
     def has_expired(self):
         return datetime.datetime.now(datetime.timezone.utc) >= self.expiration_date
