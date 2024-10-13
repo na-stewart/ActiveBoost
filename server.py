@@ -22,7 +22,7 @@ async def exception_parser(request, e):
             "data": e.__class__.__name__,
             "message": str(e),
         },
-        e.status_code if hasattr(e, "status_code") else 500,
+        e.status_code if hasattr(e, "status_code") else 400,
     )
 
 
