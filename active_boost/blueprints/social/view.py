@@ -1,3 +1,5 @@
+import datetime
+
 from sanic import Blueprint
 from sanic_security.authentication import requires_authentication
 from sanic_security.authorization import (
@@ -6,7 +8,9 @@ from sanic_security.authorization import (
 from sanic_security.models import Account, Role
 from sanic_security.utils import get_expiration_date
 
+from active_boost.blueprints.security.account.models import Profile
 from active_boost.blueprints.social.models import Group, Challenge
+from active_boost.common.exceptions import ThresholdNotMetError
 from active_boost.common.util import json, str_to_bool
 
 social_bp = Blueprint("social")
@@ -179,9 +183,9 @@ async def on_create_challenge(request):
         description=request.form.get("description"),
         prize=request.form.get("prize"),
         threshold=request.form.get("threshold"),
-        expiration_date=get_expiration_date(
-            request.form.get("expiration-date")
-        ),  # Change later.
+        expiration_date=datetime.datetime.strptime(
+            request.form.get("expiration-date"), "%Y-%m-%d %H:%M:%S"
+        ),
         challenger=authentication_session.bearer,
         group=request.args.get("id"),
     )
@@ -216,5 +220,24 @@ async def on_delete_challenge(request):
     await Group.check_group_user_permissions(request, "challenges")
     challenge = await Challenge.get_from_group(request)
     challenge.delete = True
+    await challenge.save(update_fields="delete")
+    return json("Challenge deleted.", challenge.json)
+
+
+@social_bp.put("groups/challenges/redeem")
+async def on_challenge_redeem(request):
+    await Group.check_group_user_permissions(request, "challenges")
+    challenge = await Challenge.get_from_group(request)
+    if challenge.has_expired():
+        challenge.participants.remove(request.ctx.authentication_session.bearer)
+        profile = await Profile.get_from_account(challenge)
+        profile.update_balance(-challenge.penalty)
+    elif request.args.get("threshold-attempt") > challenge.threshold:
+        challenge.participants.remove(request.ctx.authentication_session.bearer)
+        challenge.finishers.add(request.ctx.authentication_session.bearer)
+        profile = await Profile.get_from_account(challenge)
+        await profile.update_balance(challenge.prize)
+    else:
+        raise ThresholdNotMetError
     await challenge.save(update_fields="delete")
     return json("Challenge deleted.", challenge.json)

@@ -4,7 +4,7 @@ from active_boost.blueprints.security.view import security_bp
 from active_boost.blueprints.social.view import social_bp
 
 api_models = [
-    "active_boost.blueprints.account.models",
+    "active_boost.blueprints.security.account.models",
     "active_boost.blueprints.social.models",
     "sanic_security.models",
 ]

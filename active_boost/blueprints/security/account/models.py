@@ -17,12 +17,10 @@ class Profile(BaseModel):
         profile = await cls.get(account=account, deleted=False)
         return profile
 
-    @classmethod
-    async def update_balance(cls, account: Account, adjustment: int):
-        profile = await cls.get_from_account(account)
-        profile.balance += adjustment
-        await profile.save(update_fields=["balance"])
-        return profile
+    async def update_balance(self, adjustment: int):
+        self.balance += adjustment
+        await self.save(update_fields=["balance"])
+        return self
 
     @property
     def json(self) -> dict:

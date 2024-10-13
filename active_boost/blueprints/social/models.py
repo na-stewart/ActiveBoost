@@ -66,7 +66,9 @@ class Challenge(BaseModel):
     title: str = fields.CharField(unique=True, max_length=225)
     description: str = fields.TextField()
     prize: int = fields.IntField()
+    penalty: int = fields.IntField()
     threshold = fields.IntField()  # Distance, steps, heartrate, etc.
+    threshold_type = fields.CharField(max_length=255)
     expiration_date: datetime.datetime = fields.DatetimeField()
     challenger: fields.ForeignKeyRelation["Account"] = fields.ForeignKeyField(
         "models.Account", null=True, related_name="challenged_by"
@@ -81,6 +83,9 @@ class Challenge(BaseModel):
     finishers: fields.ManyToManyRelation["Account"] = fields.ManyToManyField(
         "models.Account", through="challenge_finisher", related_name="finisher"
     )
+
+    def has_expired(self):
+        return datetime.datetime.now(datetime.timezone.utc) >= self.expiration_date
 
     @classmethod
     async def get_from_challenger(cls, account: Account):
