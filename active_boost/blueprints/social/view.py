@@ -173,7 +173,7 @@ async def on_get_user_challenges(request):
 @social_bp.get("challenges/participants")
 @requires_authentication
 async def on_get_challenge_participants(request):
-    challenge = await Challenge.get_from_group(request)
+    challenge = await Challenge.get(id=request.args.get("id"), deleted=False)
     participants = await challenge.participants.filter(deleted=False).all()
     finishers = await challenge.participants.filter(deleted=False).all()
     return json(
@@ -187,11 +187,9 @@ async def on_get_challenge_participants(request):
 
 @social_bp.get("challenges")
 @requires_authentication
-async def on_get_group_challenges(request):
+async def on_get_challenges(request):
     challenges = await Challenge.get_all_from_group(request)
-    return json(
-        "Group challenges retrieved.", [challenge.json for challenge in challenges]
-    )
+    return json("Challenges retrieved.", [challenge.json for challenge in challenges])
 
 
 @social_bp.post("challenges")
