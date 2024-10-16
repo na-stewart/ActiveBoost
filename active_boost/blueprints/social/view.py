@@ -31,11 +31,13 @@ async def on_get_user_group_members(request):
     members = await group.members.filter(deleted=False).all()
     response_array = []
     for member in members:
-        group_balance = 0  # The total amount of points accrued from completed challenges per group.
-        challenges = await Challenge.get_all_from_group_and_participant(request, member)
+        group_balance = (
+            0  # The total amount of points accrued from completed challenges per group.
+        )
+        challenges = await Challenge.get_all_from_group_and_member(request, member)
         for challenge in challenges:
             if await challenge.finishers.filter(
-                    id=member.id
+                id=member.id
             ).exists():  # Has member completed the challenge?
                 group_balance += challenge.reward
             elif challenge.has_expired():
@@ -171,9 +173,7 @@ async def on_get_user_challenges(request):
 @social_bp.get("challenges/participants")
 @requires_authentication
 async def on_get_challenge_participants(request):
-    challenge = await Challenge.get_from_group(
-        request, request.ctx.authentication_session.bearer
-    )
+    challenge = await Challenge.get_from_group(request)
     participants = await challenge.participants.filter(deleted=False).all()
     finishers = await challenge.participants.filter(deleted=False).all()
     return json(
@@ -188,9 +188,7 @@ async def on_get_challenge_participants(request):
 @social_bp.get("challenges")
 @requires_authentication
 async def on_get_group_challenges(request):
-    challenges = await Challenge.get_all_from_group(
-        request, request.ctx.authentication_session.bearer
-    )
+    challenges = await Challenge.get_all_from_group(request)
     return json(
         "Group challenges retrieved.", [challenge.json for challenge in challenges]
     )
@@ -263,7 +261,9 @@ async def on_delete_challenge(request):
 @social_bp.put("challenges/join")
 @requires_authentication
 async def on_join_challenge(request):
-    challenge = await Challenge.get_from_group(request)
+    challenge = await Challenge.get_from_group_and_member(
+        request, request.ctx.authentication_session.bearer
+    )
     await challenge.participants.add(request.ctx.authentication_session.bearer)
     return json("Challenge joined", challenge.json)
 
