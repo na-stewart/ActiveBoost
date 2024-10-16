@@ -19,46 +19,43 @@ social_bp = Blueprint("social")
 @requires_authentication
 async def on_get_user_groups(request):
     groups = await Group.get_all_from_member(request.ctx.authentication_session.bearer)
-    return json("User groups retrieved", [group.json for group in groups])
+    return json("User groups retrieved.", [group.json for group in groups])
 
 
-@social_bp.get("groups")
-async def on_get_all_public_groups(request):
-    groups = await Group.filter(deleted=False, private=False).all()
-    return json("Public groups retrieved", [group.json for group in groups])
-
-
-@social_bp.get("groups/members")
+@social_bp.get("groups/you/members")
 @requires_authentication
-async def on_get_group_members(request):
+async def on_get_user_group_members(request):
     group = await Group.get_from_member(
         request, request.ctx.authentication_session.bearer
     )
     members = await group.members.filter(deleted=False).all()
     response_array = []
     for member in members:
-        group_balance = 0
-        challenges = await Challenge.get_all_from_group(request)
+        group_balance = 0  # The total amount of points accrued from completed challenges per group.
+        challenges = await Challenge.get_all_from_group_and_participant(request, member)
         for challenge in challenges:
-            if await challenge.participants.filter(
-                member.id
-            ).exists():  # Has member participated in the challenge?
-                if await challenge.finishers.filter(
+            if await challenge.finishers.filter(
                     id=member.id
-                ).exists():  # Has member completed the challenge?
-                    group_balance += challenge.reward
-                elif challenge.has_expired():
-                    group_balance -= challenge.penalty
+            ).exists():  # Has member completed the challenge?
+                group_balance += challenge.reward
+            elif challenge.has_expired():
+                group_balance -= challenge.penalty
         profile = await Profile.get_from_account(member)
         response_array.append(
             {
                 "account": member.username,
                 "profile": profile.json,
-                "group_balance": group_balance,
+                "balance": group_balance,
             }
         )
 
-    return json("Group members retrieved", response_array)
+    return json("Group members retrieved.", response_array)
+
+
+@social_bp.get("groups")
+async def on_get_all_public_groups(request):
+    groups = await Group.filter(deleted=False, private=False).all()
+    return json("Public groups retrieved.", [group.json for group in groups])
 
 
 @social_bp.post("groups")
@@ -121,7 +118,7 @@ async def on_join_group(request):
     return json("Group joined.", group.json)
 
 
-@social_bp.get("groups/role")
+@social_bp.get("groups/roles")
 async def on_get_group_roles(request):
     await Group.check_group_user_permissions(request, "group")
     roles = await Role.filter(
@@ -130,7 +127,7 @@ async def on_get_group_roles(request):
     return json("Group roles retrieved.", [role.json for role in roles])
 
 
-@social_bp.put("groups/role/assign")
+@social_bp.put("groups/roles/assign")
 async def on_permit_group_user(request):
     await Group.check_group_user_permissions(request, "group")
     account_being_permitted = await Account.get(
@@ -145,7 +142,7 @@ async def on_permit_group_user(request):
     return json("Group participant assigned role.", role.json)
 
 
-@social_bp.put("groups/role/prohibit")
+@social_bp.put("groups/roles/prohibit")
 async def on_prohibit_group_user(request):
     await Group.check_group_user_permissions(request, "group")
     account_being_prohibited = await Account.get(
@@ -171,19 +168,12 @@ async def on_get_user_challenges(request):
     )
 
 
-@social_bp.get("challenges")
-@requires_authentication
-async def on_get_group_challenges(request):
-    challenges = await Challenge.get_all_from_group(request)
-    return json(
-        "Group challenges retrieved.", [challenge.json for challenge in challenges]
-    )
-
-
 @social_bp.get("challenges/participants")
 @requires_authentication
-async def on_get_group_challenge_participants(request):
-    challenge = await Challenge.get_from_group(request)
+async def on_get_challenge_participants(request):
+    challenge = await Challenge.get_from_group(
+        request, request.ctx.authentication_session.bearer
+    )
     participants = await challenge.participants.filter(deleted=False).all()
     finishers = await challenge.participants.filter(deleted=False).all()
     return json(
@@ -192,6 +182,17 @@ async def on_get_group_challenge_participants(request):
             "participants": [participant.json for participant in participants],
             "finishers": [finisher.json for finisher in finishers],
         },
+    )
+
+
+@social_bp.get("challenges")
+@requires_authentication
+async def on_get_group_challenges(request):
+    challenges = await Challenge.get_all_from_group(
+        request, request.ctx.authentication_session.bearer
+    )
+    return json(
+        "Group challenges retrieved.", [challenge.json for challenge in challenges]
     )
 
 
