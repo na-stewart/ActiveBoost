@@ -22,26 +22,28 @@ async def on_get_user_groups(request):
     return json("User groups retrieved.", [group.json for group in groups])
 
 
-@social_bp.get("groups/you/members")
+@social_bp.get("groups/members")
 @requires_authentication
-async def on_get_user_group_members(request):
-    group = await Group.get_from_member(
-        request, request.ctx.authentication_session.bearer
-    )
+async def on_get_group_members(request):
+    group = await Group.get(id=request.args.get("id"), deleted=False)
     members = await group.members.filter(deleted=False).all()
+    challenges = await Challenge.get_all_from_group(request, request.args.get("id"))
     response_array = []
     for member in members:
         group_balance = (
             0  # The total amount of points accrued from completed challenges per group.
         )
-        challenges = await Challenge.get_all_from_group_and_member(request, member)
         for challenge in challenges:
             if await challenge.finishers.filter(
                 id=member.id
             ).exists():  # Has member completed the challenge?
                 group_balance += challenge.reward
-            elif challenge.has_expired():
+            elif (
+                await challenge.participants.filter(id=member.id).exists()
+                and challenge.has_expired()
+            ):
                 group_balance -= challenge.penalty
+            print(challenge.has_expired())
         profile = await Profile.get_from_account(member)
         response_array.append(
             {

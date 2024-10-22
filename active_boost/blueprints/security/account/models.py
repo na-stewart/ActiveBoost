@@ -19,10 +19,6 @@ class Profile(BaseModel):
     @property
     def json(self) -> dict:
         return {
-            "id": self.id,
             "pfp_url": self.pfp_url,
             "bio": self.bio,
-            "account": (
-                self.account.username if isinstance(self.account, Account) else None
-            ),
         }
