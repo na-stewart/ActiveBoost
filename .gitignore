@@ -3,3 +3,4 @@
 Procfile
 /.ebextensions/
 /static/
+server.zip
