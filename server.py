@@ -1,6 +1,6 @@
 import traceback
 
-from sanic import Sanic, json
+from sanic import Sanic, json, text
 from sanic_security.authentication import (
     create_initial_admin_account,
     attach_refresh_encoder,
@@ -12,6 +12,9 @@ from active_boost.common.util import config
 
 app = Sanic("active_boost")
 app.blueprint(api)
+
+app.static("/", "static", name="activeboost_docs_static")
+app.static("/", "static/index.html", name="activeboost_docs_index")
 
 
 @app.exception(Exception)
@@ -26,7 +29,7 @@ async def exception_parser(request, e):
     )
 
 
-# app.config.PROXIES_COUNT = 1 Uncomment if hosted in cloud or with proxies.
+app.config.PROXIES_COUNT = 1
 register_tortoise(
     app,
     db_url=config.DATABASE_URL,

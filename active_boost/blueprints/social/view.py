@@ -9,7 +9,11 @@ from sanic_security.models import Account, Role
 
 from active_boost.blueprints.security.account.models import Profile
 from active_boost.blueprints.social.models import Group, Challenge
-from active_boost.common.exceptions import ThresholdNotMetError, ChallengeExpiredError
+from active_boost.common.exceptions import (
+    ThresholdNotMetError,
+    ChallengeExpiredError,
+    InvalidThresholdTypeError,
+)
 from active_boost.common.util import json, str_to_bool
 
 social_bp = Blueprint("social")
@@ -18,6 +22,7 @@ social_bp = Blueprint("social")
 @social_bp.get("groups/you")
 @requires_authentication
 async def on_get_user_groups(request):
+    """Retrieves groups associated with user."""
     groups = await Group.get_all_from_member(request.ctx.authentication_session.bearer)
     return json("User groups retrieved.", [group.json for group in groups])
 
@@ -25,6 +30,8 @@ async def on_get_user_groups(request):
 @social_bp.get("groups/members")
 @requires_authentication
 async def on_get_group_members(request):
+    """Retrieves members of a group and their point value in that group."""
+    # Super not optimal wtf?
     group = await Group.get(id=request.args.get("id"), deleted=False)
     members = await group.members.filter(deleted=False).all()
     challenges = await Challenge.get_all_from_group(request, request.args.get("id"))
@@ -58,6 +65,7 @@ async def on_get_group_members(request):
 
 @social_bp.get("groups")
 async def on_get_all_public_groups(request):
+    """Retrieves all groups not marked as private."""
     groups = await Group.filter(deleted=False, private=False).all()
     return json("Public groups retrieved.", [group.json for group in groups])
 
@@ -65,6 +73,7 @@ async def on_get_all_public_groups(request):
 @social_bp.post("groups")
 @requires_authentication
 async def on_create_group(request):
+    """Creates a group and are assigned all permissions for that group to allow full access."""
     group = await Group.create(
         title=request.form.get("title"),
         description=request.form.get("description"),
@@ -96,6 +105,7 @@ async def on_create_group(request):
 
 @social_bp.put("groups")
 async def on_update_group(request):
+    """Update group information if permitted."""
     await Group.check_group_user_permissions(request, "group")
     group = await Group.get(id=request.args.get("id"), deleted=False)
     group.title = request.form.get("title")
@@ -107,6 +117,7 @@ async def on_update_group(request):
 
 @social_bp.delete("groups")
 async def on_delete_group(request):
+    """Delete group if permitted."""
     await Group.check_group_user_permissions(request, "group")
     group = await Group.get(id=request.args.get("id"), deleted=False)
     group.deleted = True
@@ -117,6 +128,7 @@ async def on_delete_group(request):
 @social_bp.put("groups/join")
 @requires_authentication
 async def on_join_group(request):
+    """Join group and be added to its members list."""
     group = await Group.get(id=request.args.get("id"), deleted=False)
     await group.members.add(request.ctx.authentication_session.bearer)
     return json("Group joined.", group.json)
@@ -124,6 +136,7 @@ async def on_join_group(request):
 
 @social_bp.get("groups/roles")
 async def on_get_group_roles(request):
+    """Retrieve group roles and view details if permitted."""
     await Group.check_group_user_permissions(request, "group")
     roles = await Role.filter(
         permissions__startswith=f"group-{request.args.get("id")}", deleted=False
@@ -133,6 +146,7 @@ async def on_get_group_roles(request):
 
 @social_bp.put("groups/roles/assign")
 async def on_permit_group_user(request):
+    """User can add role to another account such as moderator, manager, etc."""
     await Group.check_group_user_permissions(request, "group")
     account_being_permitted = await Account.get(
         id=request.args.get("account"), deleted=False
@@ -148,6 +162,7 @@ async def on_permit_group_user(request):
 
 @social_bp.put("groups/roles/prohibit")
 async def on_prohibit_group_user(request):
+    """User can remove role from another account such as moderator, manager, etc."""
     await Group.check_group_user_permissions(request, "group")
     account_being_prohibited = await Account.get(
         id=request.args.get("account"), deleted=False
@@ -164,6 +179,7 @@ async def on_prohibit_group_user(request):
 @social_bp.get("challenges/you")
 @requires_authentication
 async def on_get_user_challenges(request):
+    """Retrieves challenges associated with user."""
     challenges = await Challenge.get_all_from_participant(
         request.ctx.authentication_session.bearer
     )
@@ -175,6 +191,7 @@ async def on_get_user_challenges(request):
 @social_bp.get("challenges/participants")
 @requires_authentication
 async def on_get_challenge_participants(request):
+    """Retrieves users who have joined the challenge and completed the challenge."""
     challenge = await Challenge.get(id=request.args.get("id"), deleted=False)
     participants = await challenge.participants.filter(deleted=False).all()
     finishers = await challenge.participants.filter(deleted=False).all()
@@ -190,12 +207,16 @@ async def on_get_challenge_participants(request):
 @social_bp.get("challenges")
 @requires_authentication
 async def on_get_challenges(request):
+    """
+    Retrieve all challenges associated with a group.
+    """
     challenges = await Challenge.get_all_from_group(request)
     return json("Challenges retrieved.", [challenge.json for challenge in challenges])
 
 
 @social_bp.post("challenges")
 async def on_create_challenge(request):
+    """Creates challenge associated with group if creator is in that group."""
     authentication_session = await Group.check_group_user_permissions(
         request, "challenges", request.args.get("group")
     )
@@ -220,6 +241,7 @@ async def on_create_challenge(request):
 
 @social_bp.put("challenges")
 async def on_update_challenge(request):
+    """Update challenge information if permitted."""
     await Group.check_group_user_permissions(
         request, "challenges", request.args.get("group")
     )
@@ -249,6 +271,7 @@ async def on_update_challenge(request):
 
 @social_bp.delete("challenges")
 async def on_delete_challenge(request):
+    """Deletes challenge if permitted."""
     await Group.check_group_user_permissions(
         request, "challenges", request.args.get("group")
     )
@@ -261,6 +284,7 @@ async def on_delete_challenge(request):
 @social_bp.put("challenges/join")
 @requires_authentication
 async def on_join_challenge(request):
+    """Join challenge and be added to its participants list."""
     challenge = await Challenge.get_from_group_and_member(
         request, request.ctx.authentication_session.bearer
     )
@@ -271,11 +295,15 @@ async def on_join_challenge(request):
 @social_bp.put("challenges/redeem")
 @requires_authentication
 async def on_challenge_redeem(request):
+    """Adds user to finishers list if threshold attempt (e.g., "distance", "steps", "heartrate") exceeds challenge requirements."""
     challenge = await Challenge.get_from_participant(
         request, request.ctx.authentication_session.bearer
     )
+
     if challenge.has_expired():
         raise ChallengeExpiredError()
+    elif challenge.threshold_type != request.args.get("threshold-type"):
+        raise InvalidThresholdTypeError()
     elif request.args.get("threshold-attempt") > challenge.threshold:
         await challenge.finishers.add(request.ctx.authentication_session.bearer)
         return json("Challenge redeemed.", challenge.json)

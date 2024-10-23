@@ -9,6 +9,21 @@ from active_boost.common.models import BaseModel
 
 
 class Group(BaseModel):
+    """
+    Base Sanic Security model that all other models derive from.
+
+    Attributes:
+        title (str): Title of the group, must be unique and have a maximum length of 225 characters.
+        description (str): Detailed description of the group.
+        private (bool): Indicates if the group is viewable for all users or only members.
+        date_updated (datetime): The last time this model was updated in the database.
+        deleted (bool): Soft delete flag, makes the model filterable without removing it from the database.
+        founder (ForeignKeyRelation["Account"]): The account that created the group. Foreign key to the Account model.
+        members (ManyToManyRelation["Account"]): A list of accounts that are members of the group. This is a many-to-many relation, linked through a join table "group_member".
+
+
+    """
+
     title: str = fields.CharField(unique=True, max_length=225)
     description: str = fields.TextField()
     private: bool = fields.BooleanField()
@@ -63,6 +78,18 @@ class Group(BaseModel):
 
 
 class Challenge(BaseModel):
+    """
+    Attributes:
+        title (str): Title of the challenge.
+        description (str): Detailed description of the challenge, describe activities and their difficulty.
+        reward (int): The amount of points a user receives associated with completing the challenge.
+        penalty (int): The amount of points removed from a user associated for not completing the challenge before it expired if participating.
+        threshold (int): The target value for the challenge (e.g., distance, steps, heart rate).
+        threshold_type (str): A description of the metric being measured for the threshold (e.g., "distance", "steps", "heartrate").
+        expiration_date (datetime): The deadline by which the challenge must be completed.
+        challenger (ForeignKeyRelation["Account"]): The account that issued the challenge. Can be null if not set. Foreign key to the Account model.
+    """
+
     title: str = fields.CharField(unique=True, max_length=225)
     description: str = fields.TextField()
     reward: int = fields.IntField()

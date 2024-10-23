@@ -6,6 +6,17 @@ from tortoise import fields, Model
 
 
 class BaseModel(Model):
+    """
+    Base model that all other models derive from.
+
+    Attributes:
+        id (int): Primary key of model.
+        icon_url (string): A majority of models will have an icon in some way, url of icon file.
+        date_created (datetime): Time this model was created in the database.
+        date_updated (datetime): Time this model was updated in the database.
+        deleted (bool): Renders the model filterable without removing from the database.
+    """
+
     id: int = fields.IntField(pk=True)
     icon_url: str = fields.CharField(null=True, max_length=255)
     date_created: datetime.datetime = fields.DatetimeField(auto_now_add=True)
@@ -26,7 +37,7 @@ class Config(dict):
     GENERATE_SCHEMAS: bool
     APP_BUILD: str
 
-    def load_environment_variables(self, load_env="ACTIVE_BOOST_") -> None:
+    def load_environment_variables(self, load_env="ACTIVEBOOST_") -> None:
         """
         Any environment variables defined with the prefix argument will be applied to the config.
         Args:
