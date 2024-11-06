@@ -33,5 +33,5 @@ class Role(BaseModel):
             "date_updated": str(self.date_updated),
             "name": self.name,
             "description": self.description,
-            "permissions": self.permissions,
+            "permissions": self.permissions.split(":")[1],
         }

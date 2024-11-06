@@ -30,7 +30,7 @@ async def assign_role(
     except DoesNotExist:
         role = await Role.create(
             description=description,
-            permissions=f"group-{group_id}-{permissions}",
+            permissions=f"group-{group_id}:{permissions}",
             name=name,
         )
     await account.roles.add(role)

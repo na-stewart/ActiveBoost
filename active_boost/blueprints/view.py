@@ -1,7 +1,7 @@
 from sanic import Blueprint
 
+from active_boost.blueprints.group.view import group_bp, challenge_bp
 from active_boost.blueprints.security.view import security_bp
-from active_boost.blueprints.social.view import social_bp
 
 api_models = [
     "active_boost.blueprints.security.models",
@@ -11,7 +11,8 @@ api_models = [
 
 api = Blueprint.group(
     security_bp,
-    social_bp,
+    group_bp,
+    challenge_bp,
     version=1,
     version_prefix="/api/v",
 )
