@@ -33,9 +33,12 @@ class BaseModel(Model):
 
 class Config(dict):
     DEBUG: bool
+    SECRET: str
     DATABASE_URL: str
     GENERATE_SCHEMAS: bool
     APP_BUILD: str
+    FITBIT_SECRET: str
+    FITBIT_CLIENT: str
 
     def load_environment_variables(self, load_env="ACTIVEBOOST_") -> None:
         """

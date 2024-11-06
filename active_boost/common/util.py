@@ -10,6 +10,9 @@ config = Config(
         "DATABASE_URL": "sqlite://db.sqlite3",
         "GENERATE_SCHEMAS": True,
         "APP_BUILD": "0.0.1",
+        "SECRET": "ymYjBr6AFxv494nzklUj",
+        "FITBIT_SECRET": "58e2c6749ba6cb49d4900debf47798b7",
+        "FITBIT_CLIENT": "23PR33",
     }
 )
 

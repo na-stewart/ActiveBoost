@@ -40,3 +40,21 @@ class ChallengeExpiredError(ActiveBoostError):
 
     def __init__(self):
         super().__init__("This challenge has expired and can no longer be redeemed.")
+
+
+class AuthorizationError(ActiveBoostError):
+    """
+    Raised when an account has insufficient permissions for an action.
+    """
+
+    def __init__(self):
+        super().__init__("Insufficient permissions required for this action.", 403)
+
+
+class AnonymousError(ActiveBoostError):
+    """
+    Raised when an account has not logged in.
+    """
+
+    def __init__(self):
+        super().__init__("Login required.", 401)

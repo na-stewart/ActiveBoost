@@ -1,80 +1,11 @@
 import datetime
 
-from sanic import Request
-from sanic_security.authorization import check_permissions
-from sanic_security.models import Account, AuthenticationSession
+from sanic.response.types import Request
 from tortoise import fields
 
+from active_boost.blueprints.group.models import Group
+from active_boost.blueprints.security.models import Account
 from active_boost.common.models import BaseModel
-
-
-class Group(BaseModel):
-    """
-    Base Sanic Security model that all other models derive from.
-
-    Attributes:
-        title (str): Title of the group, must be unique and have a maximum length of 225 characters.
-        description (str): Detailed description of the group.
-        private (bool): Indicates if the group is viewable for all users or only members.
-        date_updated (datetime): The last time this model was updated in the database.
-        deleted (bool): Soft delete flag, makes the model filterable without removing it from the database.
-        founder (ForeignKeyRelation["Account"]): The account that created the group. Foreign key to the Account model.
-        members (ManyToManyRelation["Account"]): A list of accounts that are members of the group. This is a many-to-many relation, linked through a join table "group_member".
-
-
-    """
-
-    title: str = fields.CharField(unique=True, max_length=225)
-    description: str = fields.TextField()
-    private: bool = fields.BooleanField()
-    founder: fields.ForeignKeyRelation["Account"] = fields.ForeignKeyField(
-        "models.Account"
-    )
-    members: fields.ManyToManyRelation["Account"] = fields.ManyToManyField(
-        "models.Account", through="group_member", related_name="memberships"
-    )
-
-    @classmethod
-    async def get_all_from_member(cls, account: Account):
-        """Retrieve all groups account has joined."""
-        return (
-            await cls.filter(members__in=[account], deleted=False)
-            .prefetch_related("members")
-            .all()
-        )
-
-    @classmethod
-    async def get_from_member(
-        cls, request: Request, account: Account, group_id: int = None
-    ):
-        """Retrieve particular group account has joined."""
-        return await cls.get(
-            id=group_id if group_id else request.args.get("id"),
-            members__in=[account],
-            deleted=False,
-        )
-
-    @staticmethod
-    async def check_group_user_permissions(
-        request: Request, permissions: str, group_id: int = None
-    ) -> AuthenticationSession:
-        """Checks what group actions a user is allowed."""
-        return await check_permissions(
-            request,
-            f"group-{group_id if group_id else request.args.get("id")}:{permissions}",
-        )
-
-    @property
-    def json(self) -> dict:
-        return {
-            "id": self.id,
-            "title": self.title,
-            "description": self.description,
-            "private": self.private,
-            "founder": (
-                self.founder.username if isinstance(self.founder, Account) else None
-            ),
-        }
 
 
 class Challenge(BaseModel):
@@ -83,7 +14,6 @@ class Challenge(BaseModel):
         title (str): Title of the challenge.
         description (str): Detailed description of the challenge, describe activities and their difficulty.
         reward (int): The amount of points a user receives associated with completing the challenge.
-        penalty (int): The amount of points removed from a user associated for not completing the challenge before it expired if participating.
         threshold (int): The target value for the challenge (e.g., distance, steps, heart rate).
         threshold_type (str): A description of the metric being measured for the threshold (e.g., "distance", "steps", "heartrate").
         expiration_date (datetime): The deadline by which the challenge must be completed.
@@ -93,9 +23,10 @@ class Challenge(BaseModel):
     title: str = fields.CharField(unique=True, max_length=225)
     description: str = fields.TextField()
     reward: int = fields.IntField()
-    penalty: int = fields.IntField()
-    threshold = fields.IntField()  # Distance, steps, heartrate, etc.
-    threshold_type = fields.CharField(max_length=255)
+    threshold = fields.IntField()
+    threshold_type = fields.CharField(
+        max_length=255
+    )  # Distance, steps, heartrate, etc.
     expiration_date: datetime.datetime = fields.DatetimeField()
     challenger: fields.ForeignKeyRelation["Account"] = fields.ForeignKeyField(
         "models.Account", null=True, related_name="challenged_by"
@@ -118,7 +49,6 @@ class Challenge(BaseModel):
             "title": self.title,
             "description": self.description,
             "reward": self.reward,
-            "penalty": self.penalty,
             "completion_threshold": self.threshold,
             "threshold_type": self.threshold_type,
             "expiration_date": str(self.expiration_date),

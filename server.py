@@ -1,10 +1,6 @@
 import traceback
 
-from sanic import Sanic, json, text
-from sanic_security.authentication import (
-    create_initial_admin_account,
-    attach_refresh_encoder,
-)
+from sanic import Sanic, json
 from tortoise.contrib.sanic import register_tortoise
 
 from active_boost.blueprints.view import api, api_models
@@ -29,14 +25,11 @@ async def exception_parser(request, e):
     )
 
 
-app.config.PROXIES_COUNT = 1
 register_tortoise(
     app,
     db_url=config.DATABASE_URL,
     modules={"models": api_models},
     generate_schemas=config.GENERATE_SCHEMAS,
 )
-create_initial_admin_account(app)
-attach_refresh_encoder(app)
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=8000, workers=1, debug=config.DEBUG)
