@@ -12,6 +12,7 @@ class Account(BaseModel):
         bio (str): A small excerpt about the user.
         user_id (str): Obtained via OAuth during login.
         roles (ManyToManyRelation[Role]): Roles associated with this account.
+        disabled (bool): Renders the account unusable.
     """
 
     bio: str = fields.TextField(null=True)
@@ -20,6 +21,7 @@ class Account(BaseModel):
     roles: fields.ManyToManyRelation["Role"] = fields.ManyToManyField(
         "models.Role", through="account_role"
     )
+    disabled: bool = fields.BooleanField(default=False)
 
     @property
     def json(self) -> dict:

@@ -47,8 +47,8 @@ class AuthorizationError(ActiveBoostError):
     Raised when an account has insufficient permissions for an action.
     """
 
-    def __init__(self):
-        super().__init__("Insufficient permissions required for this action.", 403)
+    def __init__(self, message="Insufficient permissions required for this action."):
+        super().__init__(message, 403)
 
 
 class AnonymousUserError(ActiveBoostError):

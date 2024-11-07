@@ -5,7 +5,7 @@ from httpx_oauth.oauth2 import OAuth2
 from sanic import Blueprint, redirect, text, Sanic
 
 from active_boost.blueprints.security.models import Account
-from active_boost.common.exceptions import AnonymousUserError
+from active_boost.common.exceptions import AnonymousUserError, AuthorizationError
 from active_boost.common.util import config, json
 
 security_bp = Blueprint("security", url_prefix="security")
@@ -17,6 +17,22 @@ o_auth = OAuth2(
     refresh_token_endpoint="https://api.fitbit.com/oauth2/token",
     token_endpoint_auth_method="client_secret_basic",
 )
+
+
+@security_bp.put("account")
+async def on_update_account(request):
+    request.ctx.account.username = request.form.get("username")
+    request.ctx.account.bio = request.form.get("bio")
+    request.ctx.account.icon_url = request.form.get("pfp_url")
+    await request.ctx.account.save(update_fields=["username", "bio", "pfp_url"])
+    return json("Account updated.", request.ctx.account.json)
+
+
+@security_bp.delete("account")
+async def on_delete_account(request):
+    request.ctx.account.deleted = True
+    await request.ctx.account.save(update_fields=["delete"])
+    return json("Account deleted.", request.ctx.account.json)
 
 
 @security_bp.post("login")
@@ -63,7 +79,7 @@ async def on_oauth_callback(request):
 
 @security_bp.post("logout")
 async def on_logout(request):
-    response = text("Logged out.")
+    response = json("Logged out.", request.ctx.account.json)
     response.delete_cookie("tkn_activb")
     return response
 
@@ -82,6 +98,8 @@ def initialize_security(app: Sanic) -> None:
                     username=request.ctx.token_info["user_id"],
                 )
             )[0]
+            if request.ctx.account.disabled or request.ctx.account.deleted:
+                raise AuthorizationError("Account is disabled.")
             if time.time() > request.ctx.token_info["expires_at"]:
                 request.ctx.token_info = await o_auth.refresh_token(
                     request.ctx.token_info["refresh_token"]
