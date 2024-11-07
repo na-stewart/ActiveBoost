@@ -19,7 +19,7 @@ challenge_bp = Blueprint("challenge", url_prefix="group/challenge")
 @group_bp.get("you")
 async def on_get_user_groups(request):
     """Retrieves groups associated with user."""
-    groups = await Group.get_all_from_member(request.ctx.authentication_session.bearer)
+    groups = await Group.get_all_from_member(request.ctx.account)
     return json("User groups retrieved.", [group.json for group in groups])
 
 
@@ -69,15 +69,15 @@ async def on_create_group(request):
         title=request.form.get("title"),
         description=request.form.get("description"),
         private=str_to_bool(request.form.get("private")),
-        founder=request.ctx.authentication_session.bearer,
+        founder=request.ctx.account,
     )
-    await group.members.add(request.ctx.authentication_session.bearer)
+    await group.members.add(request.ctx.account)
     await assign_role(
-        f"{group.title} Manager",
+        "Manager",
         group.id,
         request.ctx.account,
         "*",
-        f"Has complete control over {group.title}.",
+        "Has complete control over group operations.",
     )
     return json("Group created.", group.json)
 
@@ -99,7 +99,7 @@ async def on_update_group(request):
 async def on_delete_group(request):
     group = await Group.get(id=request.args.get("id"), deleted=False)
     group.deleted = True
-    await group.save(update_fields=["disbanded"])
+    await group.save(update_fields=["deleted"])
     return json("Group deleted.", group.json)
 
 
@@ -107,7 +107,7 @@ async def on_delete_group(request):
 async def on_join_group(request):
     """Join group and be added to its members list."""
     group = await Group.get(id=request.args.get("id"), deleted=False)
-    await group.members.add(request.ctx.authentication_session.bearer)
+    await group.members.add(request.ctx.account)
     return json("Group joined.", group.json)
 
 
@@ -124,15 +124,24 @@ async def on_get_group_roles(request):
 @group_bp.put("roles/assign")
 @require_permissions("roles")
 async def on_permit_group_user(request):
-    """User can add role to another account such as moderator, manager, etc."""
+    """User can create new role or add role to another account such as moderator, manager, etc."""
     account_being_permitted = await Account.get(
         id=request.args.get("account"), deleted=False
     )
-    role = await Role.get(
-        permissions__startswith=f"group-{request.args.get("id")}",
-        id=request.args.get("role"),
-        deleted=False,
-    )
+    if request.args.get("role"):
+        role = await Role.get(
+            permissions__startswith=f"group-{request.args.get("id")}",
+            id=request.args.get("role"),
+            deleted=False,
+        )
+    else:
+        role = await assign_role(
+            request.form.get("name"),
+            request.args.get("id"),
+            request.ctx.account,
+            request.form.get("permissions"),
+            request.form.get("description"),
+        )
     await account_being_permitted.roles.add(role)
     return json("Group participant assigned role.", role.json)
 
@@ -217,7 +226,6 @@ async def on_update_challenge(request):
     challenge.title = request.form.get("title")
     challenge.description = request.form.get("description")
     challenge.reward = request.form.get("reward")
-    challenge.penalty = request.form.get("penalty")
     challenge.threshold = request.form.get("threshold")
     challenge.threshold_type = request.form.get("threshold-type")
     challenge.expiration_date = datetime.datetime.strptime(
@@ -230,7 +238,6 @@ async def on_update_challenge(request):
             "reward",
             "threshold",
             "expiration_date",
-            "penalty",
             "threshold_type",
         ]
     )
@@ -242,8 +249,8 @@ async def on_update_challenge(request):
 async def on_delete_challenge(request):
     """Deletes challenge if permitted."""
     challenge = await Challenge.get_from_group(request)
-    challenge.delete = True
-    await challenge.save(update_fields="delete")
+    challenge.deleted = True
+    await challenge.save(update_fields=["deleted"])
     return json("Challenge deleted.", challenge.json)
 
 
@@ -257,7 +264,7 @@ async def on_join_challenge(request):
 
 @challenge_bp.put("redeem")
 async def on_challenge_redeem(request):
-    """Adds user to finishers list if threshold attempt (e.g., "distance", "steps", "heartrate") exceeds challenge requirements."""
+    # UPDATE TO UTILIZE FITBIT DATA.
     challenge = await Challenge.get_from_participant(request, request.ctx.account)
     if challenge.has_expired():
         raise ChallengeExpiredError()

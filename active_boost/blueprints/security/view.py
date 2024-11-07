@@ -21,20 +21,27 @@ client = OAuth2(
 
 @security_bp.get("login")
 async def on_oauth_login(request):
-    authorization_url = await client.get_authorization_url(
-        "http://127.0.0.1:8000/api/v1/security/callback",
-        scope=[
-            "activity",
-            "heartrate",
-            "nutrition",
-            "oxygen_saturation",
-            "respiratory_rate",
-            "sleep",
-            "temperature",
-            "weight",
-        ],
-    )
-    return redirect(authorization_url)
+    if request.args.get("refresh-token"):
+        request.ctx.token_info = await client.refresh_token(
+            request.args.get("refresh-token")
+        )
+        request.ctx.token_info["is_refresh"] = True
+        return redirect("/")
+    else:
+        authorization_url = await client.get_authorization_url(
+            "http://127.0.0.1:8000/api/v1/security/callback",
+            scope=[
+                "activity",
+                "heartrate",
+                "nutrition",
+                "oxygen_saturation",
+                "respiratory_rate",
+                "sleep",
+                "temperature",
+                "weight",
+            ],
+        )
+        return redirect(authorization_url)
 
 
 @security_bp.get("callback")
@@ -42,7 +49,9 @@ async def on_oauth_callback(request):
     token_info = await client.get_access_token(
         request.args.get("code"), "http://127.0.0.1:8000/api/v1/security/callback"
     )
-    await Account.get_or_create(user_id=token_info["user_id"], username=token_info["user_id"])
+    await Account.get_or_create(
+        user_id=token_info["user_id"], username=token_info["user_id"]
+    )
     response = redirect("/")
     response.cookies.add_cookie(
         "tkn_activb",
@@ -52,7 +61,7 @@ async def on_oauth_callback(request):
     return response
 
 
-@security_bp.get("logout")
+@security_bp.post("logout")
 async def on_logout(request):
     response = text("Logged out.")
     response.delete_cookie("tkn_activb")
@@ -67,10 +76,13 @@ def initialize_security(app: Sanic) -> None:
             client_token_info = jwt.decode(
                 request.cookies.get("tkn_activb"), config.SECRET, algorithms=["HS256"]
             )
-            request.ctx.account = await Account.get(user_id=client_token_info["user_id"])
-            if int(time.time()) > client_token_info["expires_at"]:
-                token_info = await client.refresh_token(client_token_info["refresh_token"])
-                request.ctx.token_info = token_info
+            request.ctx.account = await Account.get(
+                user_id=client_token_info["user_id"]
+            )
+            if time.time() > client_token_info["expires_at"]:
+                request.ctx.token_info = await client.refresh_token(
+                    client_token_info["refresh_token"]
+                )
                 request.ctx.token_info["is_refresh"] = True
             else:
                 request.ctx.token_info = client_token_info
@@ -79,7 +91,9 @@ def initialize_security(app: Sanic) -> None:
 
     @app.on_response
     async def refresh_encoder_middleware(request, response):
-        if hasattr(request.ctx, "token_info") and request.ctx.token_info.get("is_refresh"):
+        if hasattr(request.ctx, "token_info") and request.ctx.token_info.get(
+            "is_refresh"
+        ):
             response.cookies.add_cookie(
                 "tkn_activb",
                 jwt.encode(request.ctx.token_info, config.SECRET, algorithm="HS256"),

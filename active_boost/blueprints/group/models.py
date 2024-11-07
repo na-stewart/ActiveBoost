@@ -38,7 +38,7 @@ class Group(BaseModel):
         """Retrieve all groups account has joined."""
         return (
             await cls.filter(members__in=[account], deleted=False)
-            .prefetch_related("members")
+            .prefetch_related("members", "founder")
             .all()
         )
 
@@ -125,7 +125,11 @@ class Challenge(BaseModel):
     @classmethod
     async def get_all_from_participant(cls, account: Account):
         """Retrieve all challenges that account is participating in."""
-        return await cls.filter(participants__in=[account.id], deleted=False).all()
+        return (
+            await cls.filter(participants__in=[account.id], deleted=False)
+            .prefetch_related("group")
+            .all()
+        )
 
     @classmethod
     async def get_from_participant(cls, request: Request, account: Account):

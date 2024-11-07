@@ -1,6 +1,7 @@
 import functools
 from fnmatch import fnmatch
 
+from httpx_oauth.oauth2 import OAuth2Token
 from sanic.response.types import Request
 from tortoise.exceptions import DoesNotExist
 
@@ -37,7 +38,7 @@ async def assign_role(
     return role
 
 
-async def check_permissions(request: Request, group_id: int, permissions: str):
+async def check_permissions(request: Request, group_id: int, *permissions: str):
     roles = await request.ctx.account.roles.filter(
         permissions__startswith=f"group-{group_id}", deleted=False
     ).all()
@@ -45,7 +46,7 @@ async def check_permissions(request: Request, group_id: int, permissions: str):
         for required_permission, role_permission in zip(
             permissions, role.permissions.split(", ")
         ):
-            if fnmatch(required_permission, role_permission):
+            if fnmatch(f"group-{group_id}:{required_permission}", role_permission):
                 return
     raise AuthorizationError()
 
