@@ -26,6 +26,8 @@ class Account(BaseModel):
     @property
     def json(self) -> dict:
         return {
+            "date_created": str(self.date_created),
+            "date_updated": str(self.date_updated),
             "username": self.username,
             "pfp_url": self.icon_url,
             "bio": self.bio,
@@ -49,9 +51,9 @@ class Role(BaseModel):
     @property
     def json(self) -> dict:
         return {
-            "id": self.id,
             "date_created": str(self.date_created),
             "date_updated": str(self.date_updated),
+            "id": self.id,
             "name": self.name,
             "description": self.description,
             "permissions": self.permissions.split(":")[1],

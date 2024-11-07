@@ -56,6 +56,8 @@ class Group(BaseModel):
     @property
     def json(self) -> dict:
         return {
+            "date_created": str(self.date_created),
+            "date_updated": str(self.date_updated),
             "id": self.id,
             "title": self.title,
             "description": self.description,
@@ -103,6 +105,8 @@ class Challenge(BaseModel):
     @property
     def json(self) -> dict:
         return {
+            "date_created": str(self.date_created),
+            "date_updated": str(self.date_updated),
             "id": self.id,
             "title": self.title,
             "description": self.description,
