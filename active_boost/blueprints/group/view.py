@@ -10,7 +10,8 @@ from active_boost.common.exceptions import (
     InvalidThresholdTypeError,
     ThresholdNotMetError,
 )
-from active_boost.common.util import json, str_to_bool
+from active_boost.common.models import BearerAuth
+from active_boost.common.util import json, str_to_bool, resource_options, http_client
 
 group_bp = Blueprint("group", url_prefix="group")
 challenge_bp = Blueprint("challenge", url_prefix="group/challenge")
@@ -202,6 +203,8 @@ async def on_create_challenge(request):
     group = await Group.get_from_member(
         request, request.ctx.account, request.args.get("group")
     )
+    if request.form.get("threshold-type") not in resource_options:
+        raise InvalidThresholdTypeError()
     challenge = await Challenge.create(
         title=request.form.get("title"),
         description=request.form.get("description"),
@@ -264,13 +267,21 @@ async def on_join_challenge(request):
 
 @challenge_bp.put("redeem")
 async def on_challenge_redeem(request):
-    raise NotImplementedError()
     challenge = await Challenge.get_from_participant(request, request.ctx.account)
+    data = await http_client.get(
+        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/activities/{challenge.threshold_type}/date/"
+        f"{challenge.date_created}/{challenge.expiration_date}.json",
+        auth=BearerAuth(request.ctx.token_info["access_token"]),
+    )
     if challenge.has_expired():
         raise ChallengeExpiredError()
-    elif challenge.threshold_type != request.args.get("threshold-type"):
-        raise InvalidThresholdTypeError()
-    elif request.args.get("threshold-attempt") > challenge.threshold:
+    elif (
+        sum(
+            activity["value"]
+            for activity in data.json()[f"activities-{challenge.threshold_type}"]
+        )
+        > challenge.threshold
+    ):
         await challenge.finishers.add(request.ctx.account)
         return json("Challenge redeemed.", challenge.json)
     else:

@@ -1,3 +1,4 @@
+import httpx
 from sanic import HTTPResponse
 
 from sanic import json as sanic_json
@@ -15,6 +16,16 @@ config = Config(
         "FITBIT_CLIENT": "23PR33",
     }
 )
+http_client = httpx.AsyncClient()
+resource_options = [
+    "calories",
+    "distance",
+    "elevation",
+    "floors",
+    "minutesVeryActive",
+    "minutesFairlyActive",
+    "steps",
+]
 
 
 def json(message: str, data, status_code: int = 200) -> HTTPResponse:

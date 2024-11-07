@@ -1,6 +1,6 @@
 from sanic import SanicException
 
-from active_boost.common.util import json
+from active_boost.common.util import json, resource_options
 
 
 class ActiveBoostError(SanicException):
@@ -30,7 +30,9 @@ class InvalidThresholdTypeError(ActiveBoostError):
     """
 
     def __init__(self):
-        super().__init__("User threshold type does not match challenge threshold type.")
+        super().__init__(
+            f"Threshold type is invalid, must be {', '.join(resource_options)}."
+        )
 
 
 class ChallengeExpiredError(ActiveBoostError):
