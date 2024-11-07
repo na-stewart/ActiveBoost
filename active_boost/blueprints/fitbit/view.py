@@ -15,7 +15,7 @@ async def on_get_activity_goals(request):
         f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/activities/goals/{request.args.get("period")}.json",
         auth=BearerAuth(request.ctx.token_info["access_token"]),
     )
-    return json("Activity goals retrieved.", data.json()["goals"])
+    return json("Activity goals retrieved.", data.json())
 
 
 @fitbit_bp.get("log")
@@ -25,7 +25,7 @@ async def on_get_activity_log(request):
         f"afterDate={request.args.get("after")}&sort=asc&limit=100&offset=0",
         auth=BearerAuth(request.ctx.token_info["access_token"]),
     )
-    return json("Activity log retrieved.", data.json()["goals"])
+    return json("Activity log retrieved.", data.json())
 
 
 @fitbit_bp.get("summary")
@@ -45,7 +45,7 @@ async def on_get_active_minutes(request):
         auth=BearerAuth(request.ctx.token_info["access_token"]),
     )
     return json(
-        "Active minutes retrieved.", data.json()["activities-active-zone-minutes"]
+        "Active minutes retrieved.", data.json()
     )
 
 
@@ -64,7 +64,7 @@ async def on_get_frequent_activities(request):
         f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/activities/frequent.json",
         auth=BearerAuth(request.ctx.token_info["access_token"]),
     )
-    return json("Frequent activities retrieved.", data.json()["goals"])
+    return json("Frequent activities retrieved.", data.json())
 
 
 @fitbit_bp.get("recent")
@@ -73,4 +73,4 @@ async def on_get_recent_activities(request):
         f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/activities/recent.json",
         auth=BearerAuth(request.ctx.token_info["access_token"]),
     )
-    return json("Recent activities retrieved.", data.json()["goals"])
+    return json("Recent activities retrieved.", data.json())
