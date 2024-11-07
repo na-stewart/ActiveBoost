@@ -51,7 +51,7 @@ class AuthorizationError(ActiveBoostError):
         super().__init__("Insufficient permissions required for this action.", 403)
 
 
-class AnonymousError(ActiveBoostError):
+class AnonymousUserError(ActiveBoostError):
     """
     Raised when an account has not logged in.
     """

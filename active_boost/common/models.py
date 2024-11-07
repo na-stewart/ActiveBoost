@@ -1,6 +1,7 @@
 import datetime
 from os import environ
 
+import httpx
 from sanic.utils import str_to_bool
 from tortoise import fields, Model
 
@@ -63,3 +64,12 @@ class Config(dict):
         super().__init__(default_config)
         self.__dict__ = self
         self.load_environment_variables()
+
+
+class BearerAuth(httpx.Auth):
+    def __init__(self, token):
+        self.token = token
+
+    def auth_flow(self, request):
+        request.headers["Authorization"] = f"Bearer {self.token}"
+        yield request

@@ -5,11 +5,11 @@ from httpx_oauth.oauth2 import OAuth2
 from sanic import Blueprint, redirect, text, Sanic
 
 from active_boost.blueprints.security.models import Account
-from active_boost.common.exceptions import AnonymousError
-from active_boost.common.util import config
+from active_boost.common.exceptions import AnonymousUserError
+from active_boost.common.util import config, json
 
 security_bp = Blueprint("security", url_prefix="security")
-client = OAuth2(
+o_auth = OAuth2(
     config.FITBIT_CLIENT,
     config.FITBIT_SECRET,
     "https://www.fitbit.com/oauth2/authorize",
@@ -22,13 +22,13 @@ client = OAuth2(
 @security_bp.get("login")
 async def on_oauth_login(request):
     if request.args.get("refresh-token"):
-        request.ctx.token_info = await client.refresh_token(
+        request.ctx.token_info = await o_auth.refresh_token(
             request.args.get("refresh-token")
         )
         request.ctx.token_info["is_refresh"] = True
         return redirect("/")
     else:
-        authorization_url = await client.get_authorization_url(
+        authorization_url = await o_auth.get_authorization_url(
             "http://127.0.0.1:8000/api/v1/security/callback",
             scope=[
                 "activity",
@@ -46,13 +46,13 @@ async def on_oauth_login(request):
 
 @security_bp.get("callback")
 async def on_oauth_callback(request):
-    token_info = await client.get_access_token(
+    token_info = await o_auth.get_access_token(
         request.args.get("code"), "http://127.0.0.1:8000/api/v1/security/callback"
     )
     await Account.get_or_create(
         user_id=token_info["user_id"], username=token_info["user_id"]
     )
-    response = redirect("/")
+    response = json("User authenticated.", token_info)
     response.cookies.add_cookie(
         "tkn_activb",
         jwt.encode(token_info, config.SECRET, algorithm="HS256"),
@@ -80,14 +80,14 @@ def initialize_security(app: Sanic) -> None:
                 user_id=client_token_info["user_id"]
             )
             if time.time() > client_token_info["expires_at"]:
-                request.ctx.token_info = await client.refresh_token(
+                request.ctx.token_info = await o_auth.refresh_token(
                     client_token_info["refresh_token"]
                 )
                 request.ctx.token_info["is_refresh"] = True
             else:
                 request.ctx.token_info = client_token_info
         elif "login" not in request.url and "callback" not in request.url:
-            raise AnonymousError()
+            raise AnonymousUserError()
 
     @app.on_response
     async def refresh_encoder_middleware(request, response):

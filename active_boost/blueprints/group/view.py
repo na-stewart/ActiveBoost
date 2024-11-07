@@ -264,7 +264,7 @@ async def on_join_challenge(request):
 
 @challenge_bp.put("redeem")
 async def on_challenge_redeem(request):
-    # UPDATE TO UTILIZE FITBIT DATA.
+    raise NotImplementedError()
     challenge = await Challenge.get_from_participant(request, request.ctx.account)
     if challenge.has_expired():
         raise ChallengeExpiredError()

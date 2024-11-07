@@ -10,8 +10,8 @@ from active_boost.common.util import config
 app = Sanic("active_boost")
 app.blueprint(api)
 
-app.static("/", "static", name="activeboost_docs_static")
-app.static("/", "static/index.html", name="activeboost_docs_index")
+# app.static("/", "static", name="activb_static")
+# app.static("/", "static/index.html", name="activb_index")
 
 
 @app.exception(Exception)
