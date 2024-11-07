@@ -66,7 +66,8 @@ async def on_oauth_login(request):
 async def on_oauth_callback(request):
     """Retrieve OAuth access token via code provided by authentication server."""
     token_info = await o_auth.get_access_token(
-        request.args.get("code"), "https://activeboost.na-stewart.com/api/v1/security/callback"
+        request.args.get("code"),
+        "https://activeboost.na-stewart.com/api/v1/security/callback",
     )
     response = json("User authenticated.", token_info)
     response.cookies.add_cookie(

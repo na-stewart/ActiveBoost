@@ -44,9 +44,7 @@ async def on_get_active_minutes(request):
         f"{request.args.get("start")}/{request.args.get("end")}.json",
         auth=BearerAuth(request.ctx.token_info["access_token"]),
     )
-    return json(
-        "Active minutes retrieved.", data.json()
-    )
+    return json("Active minutes retrieved.", data.json())
 
 
 @fitbit_bp.get("heartrate")
