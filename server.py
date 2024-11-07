@@ -25,7 +25,7 @@ async def exception_parser(request, e):
         e.status_code if hasattr(e, "status_code") else 400,
     )
 
-
+app.config.PROXIES_COUNT = 1
 register_tortoise(
     app,
     db_url=config.DATABASE_URL,
