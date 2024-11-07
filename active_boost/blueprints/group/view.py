@@ -33,15 +33,13 @@ async def on_get_user_groups(request):
 @group_bp.get("members")
 async def on_get_group_members(request):
     """Retrieves members of a group and their point value in that group."""
-    # Super not optimal wtf?
     group = await Group.get(id=request.args.get("id"), deleted=False)
     members = await group.members.filter(deleted=False).all()
     challenges = await Challenge.get_all_from_group(request, request.args.get("id"))
     response_array = []
     for member in members:
-        group_balance = (
-            0  # The total amount of points accrued from completed challenges per group.
-        )
+        # The total amount of points accrued from completed challenges per group.
+        group_balance = 0
         for challenge in challenges:
             if await challenge.finishers.filter(
                 id=member.id
@@ -105,6 +103,7 @@ async def on_update_group(request):
 @group_bp.delete("/")
 @require_permissions("delete")
 async def on_delete_group(request):
+    """Disband group if permitted."""
     group = await Group.get(id=request.args.get("id"), deleted=False)
     group.deleted = True
     await group.save(update_fields=["deleted"])
@@ -196,9 +195,7 @@ async def on_get_challenge_participants(request):
 
 @challenge_bp.get("/")
 async def on_get_challenges(request):
-    """
-    Retrieve all challenges associated with a group.
-    """
+    """Retrieve all challenges associated with a group."""
     challenges = await Challenge.get_all_from_group(request)
     return json("Challenges retrieved.", [challenge.json for challenge in challenges])
 
@@ -272,6 +269,10 @@ async def on_join_challenge(request):
 
 @challenge_bp.put("redeem")
 async def on_challenge_redeem(request):
+    """
+    Adds user to challenge finishers list if threshold attempt (e.g., "distance", "steps", "calories") exceeds
+    challenge requirements.
+    """
     challenge = await Challenge.get_from_participant(request, request.ctx.account)
     if challenge.has_expired():
         raise ChallengeExpiredError()

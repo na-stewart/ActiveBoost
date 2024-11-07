@@ -21,6 +21,7 @@ o_auth = OAuth2(
 
 @security_bp.post("login")
 async def on_oauth_login(request):
+    """Initialize OAuth login procedure or directly refresh access token."""
     if request.args.get("refresh-token"):
         request.ctx.token_info = await o_auth.refresh_token(
             request.args.get("refresh-token")
@@ -47,6 +48,7 @@ async def on_oauth_login(request):
 
 @security_bp.get("callback")
 async def on_oauth_callback(request):
+    """Retrieve OAuth access token via code provided by authentication server."""
     token_info = await o_auth.get_access_token(
         request.args.get("code"), "http://127.0.0.1:8000/api/v1/security/callback"
     )
@@ -69,6 +71,7 @@ async def on_logout(request):
 def initialize_security(app: Sanic) -> None:
     @app.on_request
     async def token_acquisition_middleware(request):
+        """Inject account and OAuth token information into request context."""
         if request.cookies.get("tkn_activb"):
             request.ctx.token_info = jwt.decode(
                 request.cookies.get("tkn_activb"), config.SECRET, algorithms=["HS256"]
@@ -89,6 +92,7 @@ def initialize_security(app: Sanic) -> None:
 
     @app.on_response
     async def refresh_encoder_middleware(request, response):
+        """Encode newly refreshed access tokens."""
         if hasattr(request.ctx, "token_info") and request.ctx.token_info.get(
             "is_refresh"
         ):

@@ -6,6 +6,9 @@ from active_boost.common.util import json, http_client
 fitbit_bp = Blueprint("fitbit", url_prefix="fitbit")
 
 
+# https://dev.fitbit.com/build/reference/web-api/
+
+
 @fitbit_bp.get("goals")
 async def on_get_activity_goals(request):
     data = await http_client.get(
