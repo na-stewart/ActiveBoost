@@ -35,7 +35,7 @@ async def on_delete_account(request):
     return json("Account deleted.", request.ctx.account.json)
 
 
-@security_bp.post("login")
+@security_bp.route("login", methods=["GET", "POST"])
 async def on_oauth_login(request):
     """Initialize OAuth login procedure or directly refresh access token."""
     if request.args.get("refresh-token"):
@@ -77,7 +77,7 @@ async def on_oauth_callback(request):
     return response
 
 
-@security_bp.post("logout")
+@security_bp.route("logout", methods=["GET", "POST"])
 async def on_logout(request):
     response = json("Logged out.", request.ctx.account.json)
     response.delete_cookie("tkn_activb")
