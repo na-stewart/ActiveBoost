@@ -44,7 +44,7 @@ async def on_get_group_members(request):
                 await challenge.participants.filter(id=member.id).exists()
                 and challenge.has_expired()
             ):
-                group_balance -= challenge.penalty
+                group_balance -= challenge.reward / 4
         response_array.append(
             {
                 "account": member.username,
