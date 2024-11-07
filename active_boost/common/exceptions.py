@@ -18,10 +18,8 @@ class ThresholdNotMetError(ActiveBoostError):
     Raised when user heartrate, steps, etc total does not meet challenge requirements.
     """
 
-    def __init__(self):
-        super().__init__(
-            "User threshold attempt must exceed challenge completion threshold."
-        )
+    def __init__(self, message):
+        super().__init__(message)
 
 
 class InvalidThresholdTypeError(ActiveBoostError):

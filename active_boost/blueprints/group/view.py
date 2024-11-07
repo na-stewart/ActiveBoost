@@ -11,7 +11,13 @@ from active_boost.common.exceptions import (
     ThresholdNotMetError,
 )
 from active_boost.common.models import BearerAuth
-from active_boost.common.util import json, str_to_bool, resource_options, http_client
+from active_boost.common.util import (
+    json,
+    str_to_bool,
+    resource_options,
+    http_client,
+    get_expiration_date,
+)
 
 group_bp = Blueprint("group", url_prefix="group")
 challenge_bp = Blueprint("challenge", url_prefix="group/challenge")
@@ -66,6 +72,7 @@ async def on_get_all_public_groups(request):
 @group_bp.post("/")
 async def on_create_group(request):
     """Creates a group and are assigned all permissions for that group to allow full access."""
+    print(request.ctx.account)
     group = await Group.create(
         title=request.form.get("title"),
         description=request.form.get("description"),
@@ -212,9 +219,7 @@ async def on_create_challenge(request):
         penalty=request.form.get("penalty"),
         threshold=request.form.get("threshold"),
         threshold_type=request.form.get("threshold-type"),
-        expiration_date=datetime.datetime.strptime(
-            request.form.get("expiration-date"), "%Y-%m-%d %H:%M:%S"
-        ),
+        expiration_date=get_expiration_date(int(request.form.get("period"))),
         challenger=request.ctx.account,
         group=group,
     )
@@ -268,21 +273,23 @@ async def on_join_challenge(request):
 @challenge_bp.put("redeem")
 async def on_challenge_redeem(request):
     challenge = await Challenge.get_from_participant(request, request.ctx.account)
-    data = await http_client.get(
-        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/activities/{challenge.threshold_type}/date/"
-        f"{challenge.date_created}/{challenge.expiration_date}.json",
-        auth=BearerAuth(request.ctx.token_info["access_token"]),
-    )
     if challenge.has_expired():
         raise ChallengeExpiredError()
-    elif (
-        sum(
-            activity["value"]
+    else:
+        data = await http_client.get(
+            f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/activities/{challenge.threshold_type}/date/"
+            f"{challenge.date_created.strftime("%Y-%m-%d")}/{challenge.date_created.strftime("%Y-%m-%d")}.json",
+            auth=BearerAuth(request.ctx.token_info["access_token"]),
+        )
+        activity_total = sum(
+            int(activity["value"])
             for activity in data.json()[f"activities-{challenge.threshold_type}"]
         )
-        > challenge.threshold
-    ):
-        await challenge.finishers.add(request.ctx.account)
-        return json("Challenge redeemed.", challenge.json)
-    else:
-        raise ThresholdNotMetError()
+        if activity_total > challenge.threshold:
+            await challenge.finishers.add(request.ctx.account)
+            return json("Challenge redeemed.", challenge.json)
+        else:
+            raise ThresholdNotMetError(
+                f"You are still {challenge.threshold - activity_total} {challenge.threshold_type} away "
+                "from meeting the threshold!"
+            )

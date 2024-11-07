@@ -1,3 +1,5 @@
+import datetime
+
 import httpx
 from sanic import HTTPResponse
 
@@ -77,3 +79,20 @@ def str_to_bool(val: str) -> bool:
         return False
     else:
         raise ValueError(f"Invalid truth value {val}")
+
+
+def get_expiration_date(days: int) -> datetime.datetime:
+    """
+    Retrieves the date after which something (such as a session) is no longer valid.
+
+    Args:
+        days: days added to current time.
+
+    Returns:
+        expiration_date
+    """
+    return (
+        datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=days)
+        if days > 0
+        else None
+    )
