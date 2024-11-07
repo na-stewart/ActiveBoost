@@ -14,13 +14,21 @@ from active_boost.common.models import BearerAuth
 from active_boost.common.util import (
     json,
     str_to_bool,
-    resource_options,
     http_client,
     get_expiration_date,
 )
 
 group_bp = Blueprint("group", url_prefix="group")
 challenge_bp = Blueprint("challenge", url_prefix="group/challenge")
+resource_options = [
+    "calories",
+    "distance",
+    "elevation",
+    "floors",
+    "minutesVeryActive",
+    "minutesFairlyActive",
+    "steps",
+]
 
 
 @group_bp.get("you")
