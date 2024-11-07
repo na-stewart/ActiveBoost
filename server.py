@@ -3,6 +3,7 @@ import traceback
 from sanic import Sanic, json
 from tortoise.contrib.sanic import register_tortoise
 
+from active_boost.blueprints.security.view import initialize_security
 from active_boost.blueprints.view import api, api_models
 from active_boost.common.util import config
 
@@ -31,5 +32,6 @@ register_tortoise(
     modules={"models": api_models},
     generate_schemas=config.GENERATE_SCHEMAS,
 )
+initialize_security(app)
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=8000, workers=1, debug=config.DEBUG)
