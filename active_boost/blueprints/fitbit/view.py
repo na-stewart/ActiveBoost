@@ -22,7 +22,7 @@ async def on_get_activity_goals(request):
 async def on_get_activity_log(request):
     data = await http_client.get(
         f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/activities/list.json?"
-        f"beforeDate={request.args.get("before")}&afterDate={request.args.get("after")}&sort=asc&limit=100&offset=0",
+        f"afterDate={request.args.get("after")}&sort=asc&limit=100&offset=0",
         auth=BearerAuth(request.ctx.token_info["access_token"]),
     )
     return json("Activity log retrieved.", data.json()["goals"])

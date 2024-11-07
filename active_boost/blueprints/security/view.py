@@ -2,7 +2,7 @@ import time
 
 import jwt
 from httpx_oauth.oauth2 import OAuth2
-from sanic import Blueprint, redirect, text, Sanic
+from sanic import Blueprint, redirect, Sanic
 
 from active_boost.blueprints.security.models import Account
 from active_boost.common.exceptions import AnonymousUserError, AuthorizationError

@@ -1,7 +1,6 @@
 import functools
 from fnmatch import fnmatch
 
-from httpx_oauth.oauth2 import OAuth2Token
 from sanic.response.types import Request
 from tortoise.exceptions import DoesNotExist
 
