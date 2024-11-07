@@ -46,7 +46,7 @@ async def on_oauth_login(request):
         response = json("User authenticated.", request.ctx.token_info)
     else:
         authorization_url = await o_auth.get_authorization_url(
-            "http://127.0.0.1:8000/api/v1/security/callback",
+            "https://activeboost.na-stewart.com/api/v1/security/callback",
             scope=[
                 "activity",
                 "heartrate",
@@ -66,7 +66,7 @@ async def on_oauth_login(request):
 async def on_oauth_callback(request):
     """Retrieve OAuth access token via code provided by authentication server."""
     token_info = await o_auth.get_access_token(
-        request.args.get("code"), "http://127.0.0.1:8000/api/v1/security/callback"
+        request.args.get("code"), "https://activeboost.na-stewart.com/api/v1/security/callback"
     )
     response = json("User authenticated.", token_info)
     response.cookies.add_cookie(
