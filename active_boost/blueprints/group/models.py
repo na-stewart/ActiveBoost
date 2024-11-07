@@ -19,8 +19,6 @@ class Group(BaseModel):
         deleted (bool): Soft delete flag, makes the model filterable without removing it from the database.
         founder (ForeignKeyRelation["Account"]): The account that created the group. Foreign key to the Account model.
         members (ManyToManyRelation["Account"]): A list of accounts that are members of the group. This is a many-to-many relation, linked through a join table "group_member".
-
-
     """
 
     title: str = fields.CharField(unique=True, max_length=225)
