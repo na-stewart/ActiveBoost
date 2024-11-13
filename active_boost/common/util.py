@@ -19,6 +19,15 @@ config = Config(
     }
 )
 http_client = httpx.AsyncClient()
+activity_resource_options = [
+    "calories",
+    "distance",
+    "elevation",
+    "floors",
+    "minutesVeryActive",
+    "minutesFairlyActive",
+    "steps",
+]
 
 
 def json(message: str, data, status_code: int = 200) -> HTTPResponse:

@@ -41,12 +41,10 @@ class Group(BaseModel):
         )
 
     @classmethod
-    async def get_from_member(
-        cls, request: Request, account: Account, group_id: int = None
-    ):
+    async def get_from_member(cls, request: Request, account: Account):
         """Retrieve particular group account has joined."""
         return await cls.get(
-            id=group_id if group_id else request.args.get("id"),
+            id=request.args.get("group") or request.args.get("id"),
             members__in=[account],
             deleted=False,
         )
@@ -143,17 +141,17 @@ class Challenge(BaseModel):
         )
 
     @classmethod
-    async def get_all_from_group(cls, request: Request, group_id: int = None):
+    async def get_all_from_group(cls, request: Request):
         """Retrieve all challenges associated with group."""
         return await cls.filter(
-            group=group_id if group_id else request.args.get("group"),
+            group=request.args.get("group") or request.args.get("id"),
             deleted=False,
         ).all()
 
     @classmethod
     async def get_all_from_group_and_member(cls, request: Request, account: Account):
         """Retrieve all challenges associated with a group that the account is a member in."""
-        group = await Group.get_from_member(request, account, request.args.get("group"))
+        group = await Group.get_from_member(request, account)
         return await cls.filter(
             group=group,
             deleted=False,
@@ -172,7 +170,7 @@ class Challenge(BaseModel):
     @classmethod
     async def get_from_group_and_member(cls, request: Request, account: Account):
         """Retrieve particular challenge associated with a group that the account is a member in."""
-        group = await Group.get_from_member(request, account, request.args.get("group"))
+        group = await Group.get_from_member(request, account)
         return await Challenge.get(
             id=request.args.get("id"),
             group=group,

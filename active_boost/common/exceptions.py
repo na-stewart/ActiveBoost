@@ -1,6 +1,6 @@
 from sanic import SanicException
 
-from active_boost.common.util import json, resource_options
+from active_boost.common.util import json, activity_resource_options
 
 
 class ActiveBoostError(SanicException):
@@ -29,8 +29,7 @@ class InvalidThresholdTypeError(ActiveBoostError):
 
     def __init__(self):
         super().__init__(
-            "Threshold type is invalid, must be steps, calories, distance, elevation, floors, minutesVeryActive, "
-            "or minutesFairlyActive"
+            f"Threshold type is invalid, must be {", ".join(activity_resource_options)}."
         )
 
 

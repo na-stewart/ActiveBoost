@@ -1,7 +1,7 @@
 from sanic import Blueprint
 
 from active_boost.common.models import BearerAuth
-from active_boost.common.util import json, http_client
+from active_boost.common.util import json, http_client, activity_resource_options
 
 fitbit_bp = Blueprint("fitbit", url_prefix="fitbit")
 
@@ -11,9 +11,11 @@ fitbit_bp = Blueprint("fitbit", url_prefix="fitbit")
 
 @fitbit_bp.get("activity")
 async def on_get_activity_log(request):
+    if request.args.get("type") not in activity_resource_options:
+        raise ValueError(f"Log type must be {", ".join(activity_resource_options)}.")
     data = await http_client.get(
-        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/activities/list.json?"
-        f"afterDate={request.args.get("after")}&sort=desc&limit=100&offset=0",
+        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/activities/{request.args.get("type")}/date/"
+        f"{request.args.get("start")}/{request.args.get("end")}.json",
         auth=BearerAuth(request.ctx.token_info["access_token"]),
     )
     return json("Activity log retrieved.", data.json())
@@ -32,7 +34,8 @@ async def on_get_active_minutes(request):
 @fitbit_bp.get("heart-rate")
 async def on_get_heart_rate(request):
     data = await http_client.get(
-        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/activities/heart/date/{request.args.get("start")}/{request.args.get("end")}.json",
+        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/activities/heart/date/"
+        f"{request.args.get("start")}/{request.args.get("end")}.json",
         auth=BearerAuth(request.ctx.token_info["access_token"]),
     )
     return json("Heartrate series retrieved.", data.json())
@@ -59,7 +62,8 @@ async def on_get_recent_activities(request):
 @fitbit_bp.get("sleep")
 async def on_get_sleep(request):
     data = await http_client.get(
-        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/sleep/date/{request.args.get("start")}/{request.args.get("end")}.json",
+        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/sleep/date/{request.args.get("start")}/"
+        f"{request.args.get("end")}.json",
         auth=BearerAuth(request.ctx.token_info["access_token"]),
     )
     return json("Sleep log retrieved.", data.json())
@@ -68,7 +72,8 @@ async def on_get_sleep(request):
 @fitbit_bp.get("temperature")
 async def on_get_temperature(request):
     data = await http_client.get(
-        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/skin/date/{request.args.get("start")}/{request.args.get("end")}.json",
+        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/skin/date/{request.args.get("start")}/"
+        f"{request.args.get("end")}.json",
         auth=BearerAuth(request.ctx.token_info["access_token"]),
     )
     return json("Temperature log retrieved.", data.json())
@@ -77,7 +82,8 @@ async def on_get_temperature(request):
 @fitbit_bp.get("spo2")
 async def on_get_spo2(request):
     data = await http_client.get(
-        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/spo2/date/{request.args.get("start")}/{request.args.get("end")}.json",
+        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/spo2/date/{request.args.get("start")}/"
+        f"{request.args.get("end")}.json",
         auth=BearerAuth(request.ctx.token_info["access_token"]),
     )
     return json("SpO2 log retrieved.", data.json())
@@ -86,7 +92,8 @@ async def on_get_spo2(request):
 @fitbit_bp.get("fitness-score")
 async def on_get_fitness_score(request):
     data = await http_client.get(
-        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/cardioscore/date/{request.args.get("start")}/{request.args.get("end")}.json",
+        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/cardioscore/date/{request.args.get("start")}/"
+        f"{request.args.get("end")}.json",
         auth=BearerAuth(request.ctx.token_info["access_token"]),
     )
     return json("Fitness score log retrieved.", data.json())
@@ -95,7 +102,8 @@ async def on_get_fitness_score(request):
 @fitbit_bp.get("heart-rate-variability")
 async def on_get_heart_rate_variability(request):
     data = await http_client.get(
-        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/hrv/date/{request.args.get("start")}/{request.args.get("end")}.json",
+        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/hrv/date/{request.args.get("start")}/"
+        f"{request.args.get("end")}.json",
         auth=BearerAuth(request.ctx.token_info["access_token"]),
     )
     return json("Heart rate variability log retrieved.", data.json())
@@ -104,7 +112,8 @@ async def on_get_heart_rate_variability(request):
 @fitbit_bp.get("breathing-rate")
 async def on_get_breathing_rate(request):
     data = await http_client.get(
-        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/br/date/{request.args.get("start")}/{request.args.get("end")}.json",
+        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/br/date/{request.args.get("start")}/"
+        f"{request.args.get("end")}.json",
         auth=BearerAuth(request.ctx.token_info["access_token"]),
     )
     return json("Breathing rate log retrieved.", data.json())
@@ -113,9 +122,10 @@ async def on_get_breathing_rate(request):
 @fitbit_bp.get("body")
 async def on_get_body(request):
     if request.args.get("type") not in ["bmi", "fat", "weight"]:
-        raise ValueError("Log type must be bmi, fat, or weight.")
+        raise ValueError("Log type must be bmi, fat, weight.")
     data = await http_client.get(
-        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/body/{request.args.get("type")}/date/{request.args.get("start")}/{request.args.get("end")}.json",
+        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/body/{request.args.get("type")}/date/"
+        f"{request.args.get("start")}/{request.args.get("end")}.json",
         auth=BearerAuth(request.ctx.token_info["access_token"]),
     )
     return json("Body log retrieved.", data.json())

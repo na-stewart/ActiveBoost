@@ -16,6 +16,7 @@ from active_boost.common.util import (
     str_to_bool,
     http_client,
     get_expiration_date,
+    activity_resource_options,
 )
 
 group_bp = Blueprint("group", url_prefix="group")
@@ -74,7 +75,6 @@ async def on_get_all_public_groups(request):
 @group_bp.post("/")
 async def on_create_group(request):
     """Creates a group and are assigned all permissions for that group to allow full access."""
-    print(request.ctx.account)
     group = await Group.create(
         title=request.form.get("title"),
         description=request.form.get("description"),
@@ -125,7 +125,7 @@ async def on_join_group(request):
 @group_bp.put("kick")
 @require_permissions("update")
 async def on_kick_group_member(request):
-    """Join group and be added to its members list."""
+    """Remove account from group members list."""
     group = await Group.get(id=request.args.get("id"), deleted=False)
     await group.members.remove(request.args.get("account"))
     return json("Member kicked from group.", group.json)
@@ -220,15 +220,7 @@ async def on_create_challenge(request):
     group = await Group.get_from_member(
         request, request.ctx.account, request.args.get("group")
     )
-    if request.form.get("threshold-type") not in [
-        "calories",
-        "distance",
-        "elevation",
-        "floors",
-        "minutesVeryActive",
-        "minutesFairlyActive",
-        "steps",
-    ]:
+    if request.form.get("threshold-type") not in activity_resource_options:
         raise InvalidThresholdTypeError()
     challenge = await Challenge.create(
         title=request.form.get("title"),
