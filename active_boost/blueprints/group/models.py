@@ -5,6 +5,7 @@ from tortoise import fields
 
 from active_boost.blueprints.security.models import Account
 from active_boost.common.models import BaseModel
+from active_boost.common.util import get_code
 
 
 class Group(BaseModel):
@@ -15,15 +16,17 @@ class Group(BaseModel):
         title (str): Title of the group, must be unique and have a maximum length of 225 characters.
         description (str): Detailed description of the group.
         private (bool): Indicates if the group is viewable for all users or only members.
+        invite_code (str): Code required in order to join the group.
         date_updated (datetime): The last time this model was updated in the database.
         deleted (bool): Soft delete flag, makes the model filterable without removing it from the database.
         founder (ForeignKeyRelation["Account"]): The account that created the group. Foreign key to the Account model.
         members (ManyToManyRelation["Account"]): A list of accounts that are members of the group. This is a many-to-many relation, linked through a join table "group_member".
     """
 
-    title: str = fields.CharField(unique=True, max_length=225)
+    title: str = fields.CharField(unique=True, max_length=255)
     description: str = fields.TextField()
     private: bool = fields.BooleanField()
+    invite_code: str = fields.CharField(max_length=255, unique=True, default=get_code)
     founder: fields.ForeignKeyRelation["Account"] = fields.ForeignKeyField(
         "models.Account"
     )
@@ -57,6 +60,7 @@ class Group(BaseModel):
             "id": self.id,
             "title": self.title,
             "description": self.description,
+            "invite_code": self.invite_code,
             "private": self.private,
             "founder": (
                 self.founder.username if isinstance(self.founder, Account) else None
@@ -76,7 +80,7 @@ class Challenge(BaseModel):
         challenger (ForeignKeyRelation["Account"]): The account that issued the challenge. Can be null if not set. Foreign key to the Account model.
     """
 
-    title: str = fields.CharField(unique=True, max_length=225)
+    title: str = fields.CharField(unique=True, max_length=255)
     description: str = fields.TextField()
     reward: int = fields.IntField()
     threshold = fields.IntField()

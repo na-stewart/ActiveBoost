@@ -117,7 +117,7 @@ async def on_delete_group(request):
 @group_bp.put("join")
 async def on_join_group(request):
     """Join group and be added to its members list."""
-    group = await Group.get(id=request.args.get("id"), deleted=False)
+    group = await Group.get(invite_code=request.args.get("invite-code"), deleted=False)
     await group.members.add(request.ctx.account)
     return json("Group joined.", group.json)
 

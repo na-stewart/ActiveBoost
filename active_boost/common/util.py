@@ -1,4 +1,6 @@
 import datetime
+import random
+import string
 
 import httpx
 from sanic import HTTPResponse
@@ -67,4 +69,16 @@ def get_expiration_date(days: int) -> datetime.datetime:
         datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=days)
         if days > 0
         else None
+    )
+
+
+def get_code() -> str:
+    """
+    Generates random code.
+
+    Returns:
+        code
+    """
+    return "".join(
+        random.choice(string.ascii_uppercase + string.digits) for _ in range(7)
     )
