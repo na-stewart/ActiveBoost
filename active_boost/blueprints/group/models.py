@@ -118,11 +118,6 @@ class Challenge(BaseModel):
         return datetime.datetime.now(datetime.timezone.utc) >= self.expiration_date
 
     @classmethod
-    async def get_from_challenger(cls, account: Account):
-        """Retrieve all challenges created by the challenger."""
-        return await cls.filter(challenger=account, deleted=False).all()
-
-    @classmethod
     async def get_all_from_participant(cls, account: Account):
         """Retrieve all challenges that account is participating in."""
         return (
@@ -146,16 +141,6 @@ class Challenge(BaseModel):
         return await cls.filter(
             group=request.args.get("group") or request.args.get("id"),
             deleted=False,
-        ).all()
-
-    @classmethod
-    async def get_all_from_group_and_member(cls, request: Request, account: Account):
-        """Retrieve all challenges associated with a group that the account is a member in."""
-        group = await Group.get_from_member(request, account)
-        return await cls.filter(
-            group=group,
-            deleted=False,
-            participants__in=[account],
         ).all()
 
     @classmethod
