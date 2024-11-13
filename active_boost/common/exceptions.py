@@ -29,7 +29,8 @@ class InvalidThresholdTypeError(ActiveBoostError):
 
     def __init__(self):
         super().__init__(
-            f"Threshold type is invalid, must be {', '.join(resource_options)}."
+            "Threshold type is invalid, must be steps, calories, distance, elevation, floors, minutesVeryActive, "
+            "or minutesFairlyActive"
         )
 
 

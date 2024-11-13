@@ -7,8 +7,8 @@ from active_boost.blueprints.security.common import require_permissions, assign_
 from active_boost.blueprints.security.models import Role, Account
 from active_boost.common.exceptions import (
     ChallengeExpiredError,
-    InvalidThresholdTypeError,
     ThresholdNotMetError,
+    InvalidThresholdTypeError,
 )
 from active_boost.common.models import BearerAuth
 from active_boost.common.util import (
@@ -20,15 +20,6 @@ from active_boost.common.util import (
 
 group_bp = Blueprint("group", url_prefix="group")
 challenge_bp = Blueprint("challenge", url_prefix="group/challenge")
-resource_options = [
-    "calories",
-    "distance",
-    "elevation",
-    "floors",
-    "minutesVeryActive",
-    "minutesFairlyActive",
-    "steps",
-]
 
 
 @group_bp.get("you")
@@ -43,29 +34,34 @@ async def on_get_group_members(request):
     """Retrieves members of a group and their point value in that group."""
     group = await Group.get(id=request.args.get("id"), deleted=False)
     members = await group.members.filter(deleted=False).all()
+    return json("Group members retrieved.", [member.json for member in members])
+
+
+@group_bp.get("leaderboard")
+async def on_get_group_leaderboard(request):
+    group = await Group.get(id=request.args.get("id"), deleted=False)
+    members = await group.members.filter(deleted=False).all()
     challenges = await Challenge.get_all_from_group(request, request.args.get("id"))
-    response_array = []
+    leaderboard = []
     for member in members:
         # The total amount of points accrued from completed challenges per group.
-        group_balance = 0
+        member_balance = 0
         for challenge in challenges:
-            if await challenge.finishers.filter(
-                id=member.id
-            ).exists():  # Has member completed the challenge?
-                group_balance += challenge.reward
+            # Has member completed the challenge?
+            if await challenge.finishers.filter(id=member.id).exists():
+                member_balance += challenge.reward
             elif (
                 await challenge.participants.filter(id=member.id).exists()
                 and challenge.has_expired()
             ):
-                group_balance -= challenge.reward / 4
-        response_array.append(
+                member_balance -= challenge.reward / 4
+        leaderboard.append(
             {
                 "account": member.username,
-                "balance": group_balance,
+                "balance": member_balance,
             }
         )
-
-    return json("Group members retrieved.", response_array)
+    return json("Leaderboard retrieved.", leaderboard)
 
 
 @group_bp.get("/")
@@ -124,6 +120,15 @@ async def on_join_group(request):
     group = await Group.get(id=request.args.get("id"), deleted=False)
     await group.members.add(request.ctx.account)
     return json("Group joined.", group.json)
+
+
+@group_bp.put("kick")
+@require_permissions("update")
+async def on_kick_group_member(request):
+    """Join group and be added to its members list."""
+    group = await Group.get(id=request.args.get("id"), deleted=False)
+    await group.members.remove(request.args.get("account"))
+    return json("Member kicked from group.", group.json)
 
 
 @group_bp.get("roles")
@@ -215,7 +220,15 @@ async def on_create_challenge(request):
     group = await Group.get_from_member(
         request, request.ctx.account, request.args.get("group")
     )
-    if request.form.get("threshold-type") not in resource_options:
+    if request.form.get("threshold-type") not in [
+        "calories",
+        "distance",
+        "elevation",
+        "floors",
+        "minutesVeryActive",
+        "minutesFairlyActive",
+        "steps",
+    ]:
         raise InvalidThresholdTypeError()
     challenge = await Challenge.create(
         title=request.form.get("title"),
