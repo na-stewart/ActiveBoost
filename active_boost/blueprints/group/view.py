@@ -206,7 +206,7 @@ async def on_prohibit_group_user(request):
         id=request.args.get("account"), deleted=False
     )
     role = await Role.get(
-        permissons__startswith=f"group-{request.args.get("id")}",
+        permissions__startswith=f"group-{request.args.get("id")}",
         id=request.args.get("role"),
         deleted=False,
     )
