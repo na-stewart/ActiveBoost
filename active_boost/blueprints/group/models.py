@@ -26,7 +26,7 @@ class Group(BaseModel):
     title: str = fields.CharField(unique=True, max_length=255)
     description: str = fields.TextField()
     private: bool = fields.BooleanField()
-    invite_code: str = fields.CharField(max_length=255, unique=True, default=get_code)
+    invite_code: str = fields.CharField(max_length=255, default=get_code)
     founder: fields.ForeignKeyRelation["Account"] = fields.ForeignKeyField(
         "models.Account"
     )
@@ -140,10 +140,10 @@ class Challenge(BaseModel):
         )
 
     @classmethod
-    async def get_all_from_group(cls, request: Request):
+    async def get_all_from_group(cls, request: Request, group=None):
         """Retrieve all challenges associated with group."""
         return await cls.filter(
-            group=request.args.get("group") or request.args.get("id"),
+            group=group or request.args.get("group") or request.args.get("id"),
             deleted=False,
         ).all()
 

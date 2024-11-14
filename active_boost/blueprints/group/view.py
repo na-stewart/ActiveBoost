@@ -32,17 +32,18 @@ async def on_get_user_groups(request):
 
 @group_bp.get("members")
 async def on_get_group_members(request):
-    """Retrieves members of a group and their point value in that group."""
-    group = await Group.get(id=request.args.get("id"), deleted=False)
+    """Retrieves members of a group."""
+    group = await Group.get_from_member(request, request.ctx.account)
     members = await group.members.filter(deleted=False).all()
     return json("Group members retrieved.", [member.json for member in members])
 
 
 @group_bp.get("leaderboard")
 async def on_get_group_leaderboard(request):
-    group = await Group.get(id=request.args.get("id"), deleted=False)
+    """Retrieves the point values of the members in a group."""
+    group = await Group.get_from_member(request, request.ctx.account)
     members = await group.members.filter(deleted=False).all()
-    challenges = await Challenge.get_all_from_group(request, request.args.get("id"))
+    challenges = await Challenge.get_all_from_group(request, group)
     leaderboard = []
     for member in members:
         # The total amount of points accrued from completed challenges per group.
@@ -62,6 +63,7 @@ async def on_get_group_leaderboard(request):
                 "balance": member_balance,
             }
         )
+        leaderboard.sort(key=lambda x: x["balance"], reverse=True)
     return json("Leaderboard retrieved.", leaderboard)
 
 
@@ -117,22 +119,27 @@ async def on_delete_group(request):
 @group_bp.put("join")
 async def on_join_group(request):
     """Join group and be added to its members list."""
-    group = await Group.get(invite_code=request.args.get("invite-code"), deleted=False)
+    group = await Group.get(
+        id=request.args.get("id"),
+        invite_code=request.args.get("invite-code"),
+        deleted=False,
+    )
     await group.members.add(request.ctx.account)
     return json("Group joined.", group.json)
 
 
 @group_bp.put("kick")
-@require_permissions("update")
+@require_permissions("moderate")
 async def on_kick_group_member(request):
     """Remove account from group members list."""
     group = await Group.get(id=request.args.get("id"), deleted=False)
-    await group.members.remove(request.args.get("account"))
+    account = await Account.get(id=request.args.get("account"), deleted=False)
+    await group.members.remove(account)
     return json("Member kicked from group.", group.json)
 
 
 @group_bp.get("roles")
-@require_permissions("roles")
+@require_permissions("moderate")
 async def on_get_group_roles(request):
     """Retrieve group roles and view details if permitted."""
     roles = await Role.filter(
@@ -142,7 +149,7 @@ async def on_get_group_roles(request):
 
 
 @group_bp.put("roles/assign")
-@require_permissions("roles")
+@require_permissions("moderate")
 async def on_permit_group_user(request):
     """User can create new role or add role to another account such as moderator, manager, etc."""
     account_being_permitted = await Account.get(
@@ -167,7 +174,7 @@ async def on_permit_group_user(request):
 
 
 @group_bp.put("roles/prohibit")
-@require_permissions("roles")
+@require_permissions("moderate")
 async def on_prohibit_group_user(request):
     """User can remove role from another account such as moderator, manager, etc."""
     account_being_prohibited = await Account.get(
@@ -194,7 +201,7 @@ async def on_get_user_challenges(request):
 @challenge_bp.get("participants")
 async def on_get_challenge_participants(request):
     """Retrieves users who have joined the challenge and completed the challenge."""
-    challenge = await Challenge.get(id=request.args.get("id"), deleted=False)
+    challenge = await Challenge.get_from_group(request)
     participants = await challenge.participants.filter(deleted=False).all()
     finishers = await challenge.participants.filter(deleted=False).all()
     return json(
@@ -217,9 +224,7 @@ async def on_get_challenges(request):
 @require_permissions("challenge:create")
 async def on_create_challenge(request):
     """Creates challenge associated with group if creator is in that group."""
-    group = await Group.get_from_member(
-        request, request.ctx.account, request.args.get("group")
-    )
+    group = await Group.get_from_member(request, request.ctx.account)
     if request.form.get("threshold-type") not in activity_resource_options:
         raise InvalidThresholdTypeError()
     challenge = await Challenge.create(
@@ -278,6 +283,17 @@ async def on_join_challenge(request):
     challenge = await Challenge.get_from_group_and_member(request, request.ctx.account)
     await challenge.participants.add(request.ctx.account)
     return json("Challenge joined", challenge.json)
+
+
+@challenge_bp.put("kick")
+@require_permissions("moderate")
+async def on_kick_challenge_participant(request):
+    """Remove account from challenge participants list."""
+    challenge = await Challenge.get_from_group_and_member(request, request.ctx.account)
+    account = await Account.get(id=request.args.get("account"), deleted=False)
+    await challenge.participants.remove(account)
+    await challenge.finishers.remove(account)
+    return json("Participant kicked from challenge.", challenge.json)
 
 
 @challenge_bp.put("redeem")

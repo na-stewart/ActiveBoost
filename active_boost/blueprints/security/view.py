@@ -43,7 +43,7 @@ async def on_oauth_login(request):
             request.args.get("refresh-token")
         )
         request.ctx.token_info["is_refresh"] = True
-        response = json("User authenticated.", request.ctx.token_info)
+        response = json("User authenticated and token stored, you may utilize all endpoints now.", request.ctx.token_info)
     else:
         authorization_url = await o_auth.get_authorization_url(
             "https://activeboost.na-stewart.com/api/v1/security/callback",
@@ -69,7 +69,10 @@ async def on_oauth_callback(request):
         request.args.get("code"),
         "https://activeboost.na-stewart.com/api/v1/security/callback",
     )
-    response = json("User authenticated.", token_info)
+    response = json(
+        "User authenticated and token stored, you may utilize all endpoints now.",
+        token_info,
+    )
     response.cookies.add_cookie(
         "tkn_activb",
         jwt.encode(token_info, config.SECRET, algorithm="HS256"),

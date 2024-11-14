@@ -80,5 +80,5 @@ def get_code() -> str:
         code
     """
     return "".join(
-        random.choice(string.ascii_uppercase + string.digits) for _ in range(7)
+        random.choice(string.ascii_uppercase + string.digits) for _ in range(6)
     )
