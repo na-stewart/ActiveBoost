@@ -173,7 +173,7 @@ async def on_create_group_role(request):
 async def on_delete_group_role(request):
     """User can delete roles such as moderator, manager, etc."""
     role = await Role.get(
-        id=request.args.get("id"),
+        id=request.args.get("role"),
         permissions__startswith=f"group-{request.args.get("id")}",
         deleted=False,
     )
