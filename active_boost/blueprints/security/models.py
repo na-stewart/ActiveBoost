@@ -28,6 +28,8 @@ class Account(BaseModel):
         return {
             "date_created": str(self.date_created),
             "date_updated": str(self.date_updated),
+            "id": self.id,
+            "fitbit_id": self.user_id,
             "username": self.username,
             "pfp_url": self.icon_url,
             "bio": self.bio,

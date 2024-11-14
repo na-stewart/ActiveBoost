@@ -24,14 +24,14 @@ async def on_update_account(request):
     request.ctx.account.username = request.form.get("username")
     request.ctx.account.bio = request.form.get("bio")
     request.ctx.account.icon_url = request.form.get("pfp_url")
-    await request.ctx.account.save(update_fields=["username", "bio", "pfp_url"])
+    await request.ctx.account.save(update_fields=["username", "bio", "icon_url"])
     return json("Account updated.", request.ctx.account.json)
 
 
 @security_bp.delete("account")
 async def on_delete_account(request):
     request.ctx.account.deleted = True
-    await request.ctx.account.save(update_fields=["delete"])
+    await request.ctx.account.save(update_fields=["deleted"])
     return json("Account deleted.", request.ctx.account.json)
 
 
@@ -43,7 +43,10 @@ async def on_oauth_login(request):
             request.args.get("refresh-token")
         )
         request.ctx.token_info["is_refresh"] = True
-        response = json("User authenticated and token stored, you may utilize all endpoints now.", request.ctx.token_info)
+        response = json(
+            "User authenticated and token stored, you may utilize all endpoints now.",
+            request.ctx.token_info,
+        )
     else:
         authorization_url = await o_auth.get_authorization_url(
             "https://activeboost.na-stewart.com/api/v1/security/callback",
@@ -99,7 +102,6 @@ def initialize_security(app: Sanic) -> None:
             request.ctx.account = (
                 await Account.get_or_create(
                     user_id=request.ctx.token_info["user_id"],
-                    username=request.ctx.token_info["user_id"],
                 )
             )[0]
             if request.ctx.account.disabled or request.ctx.account.deleted:

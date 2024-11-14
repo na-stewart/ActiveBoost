@@ -1,6 +1,7 @@
 import datetime
 
 from sanic import Blueprint
+from sanic.utils import str_to_bool
 
 from active_boost.blueprints.group.models import Group, Challenge
 from active_boost.blueprints.security.common import require_permissions, assign_role
@@ -13,7 +14,6 @@ from active_boost.common.exceptions import (
 from active_boost.common.models import BearerAuth
 from active_boost.common.util import (
     json,
-    str_to_bool,
     http_client,
     get_expiration_date,
     activity_resource_options,

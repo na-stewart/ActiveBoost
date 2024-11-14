@@ -39,30 +39,6 @@ def json(message: str, data, status_code: int = 200) -> HTTPResponse:
     )
 
 
-def str_to_bool(val: str) -> bool:
-    """Takes string and tries to turn it into bool as human would do."""
-    val = val.lower()
-    if val in {
-        "y",
-        "yes",
-        "yep",
-        "yup",
-        "t",
-        "true",
-        "on",
-        "enable",
-        "enabled",
-        "1",
-    }:
-        return True
-    elif val in {"n", "no", "f", "false", "off", "disable", "disabled", "0"}:
-        return False
-    elif val is None:
-        return False
-    else:
-        raise ValueError(f"Invalid truth value {val}")
-
-
 def get_expiration_date(days: int) -> datetime.datetime:
     """Retrieves the date after which something (such as a session) is no longer valid."""
     return (

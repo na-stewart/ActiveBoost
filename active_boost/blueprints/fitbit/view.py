@@ -13,7 +13,8 @@ fitbit_bp = Blueprint("fitbit", url_prefix="fitbit")
 async def on_get_activity_list(request):
     data = await http_client.get(
         f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/activities/list.json?"
-        f"afterDate={request.args.get("after")}&beforeDate={request.args.get("before")}&sort=asc&limit=100&offset=0",
+        f"{f"afterDate={request.args.get("after")}" if request.args.get("after") else f"beforeDate={request.args.get("before")}"}"
+        "&sort=asc&limit=100&offset=0",
         auth=BearerAuth(request.ctx.token_info["access_token"]),
     )
     return json("Activity log retrieved.", data.json())
