@@ -49,7 +49,7 @@ async def on_get_heart_rate(request):
         f"{request.args.get("start")}/{request.args.get("end")}.json",
         auth=BearerAuth(request.ctx.token_info["access_token"]),
     )
-    return json("Heartrate series retrieved.", data.json())
+    return json("Heart rate series retrieved.", data.json())
 
 
 @fitbit_bp.get("frequent")
