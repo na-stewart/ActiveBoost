@@ -84,13 +84,12 @@ async def on_create_group(request):
         founder=request.ctx.account,
     )
     await group.members.add(request.ctx.account)
-    await assign_role(
-        "Manager",
-        group.id,
-        request.ctx.account,
-        "*",
-        "Has complete control over group operations.",
+    founder_role = await Role.create(
+        name="Manager",
+        description="Has complete control over group operations.",
+        permissions=f"group-{group.id}:*",
     )
+    await request.ctx.account.roles.add(founder_role)
     return json("Group created.", group.json)
 
 
