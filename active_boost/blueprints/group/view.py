@@ -70,7 +70,11 @@ async def on_get_group_leaderboard(request):
 @group_bp.get("/")
 async def on_get_all_public_groups(request):
     """Retrieves all groups not marked as private."""
-    groups = await Group.filter(deleted=False, private=False).all()
+    groups = (
+        await Group.filter(deleted=False, private=False)
+        .prefetch_related("founder")
+        .all()
+    )
     return json("Public groups retrieved.", [group.json for group in groups])
 
 
@@ -133,6 +137,11 @@ async def on_kick_group_member(request):
     """Remove account from group members list."""
     group = await Group.get(id=request.args.get("id"), deleted=False)
     account = await Account.get(id=request.args.get("account"), deleted=False)
+    roles = await Role.filter(
+        permissions__startswith=f"group-{request.args.get("id")}", deleted=False
+    ).all()
+    for role in roles:
+        await account.roles.remove(role)
     await group.members.remove(account)
     return json("Member kicked from group.", group.json)
 

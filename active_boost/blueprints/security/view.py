@@ -107,7 +107,9 @@ def initialize_security(app: Sanic) -> None:
                     username=request.ctx.token_info["user_id"],
                 )
             except IntegrityError:
-                request.ctx.account = await Account.get(user_id=request.ctx.token_info["user_id"])
+                request.ctx.account = await Account.get(
+                    user_id=request.ctx.token_info["user_id"]
+                )
             if request.ctx.account.disabled or request.ctx.account.deleted:
                 raise AuthorizationError("Account is disabled.")
             if time.time() > request.ctx.token_info["expires_at"]:
