@@ -46,7 +46,7 @@ class Role(BaseModel):
         permissions (str): Permissions of the role. Must be separated via comma + space and in wildcard format.
     """
 
-    name: str = fields.CharField(unique=True, max_length=255)
+    name: str = fields.CharField(max_length=255)
     description: str = fields.CharField(max_length=255, null=True)
     permissions: str = fields.CharField(max_length=255, null=True)
 

@@ -59,7 +59,7 @@ async def on_get_group_leaderboard(request):
                 member_balance -= challenge.reward / 4
         leaderboard.append(
             {
-                "account": member.username,
+                "account": {"id": member.id, "username": member.username},
                 "balance": member_balance,
             }
         )
