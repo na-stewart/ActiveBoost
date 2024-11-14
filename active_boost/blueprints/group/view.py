@@ -157,7 +157,7 @@ async def on_get_group_roles(request):
 
 
 @group_bp.post("role")
-@require_permissions("moderate")
+@require_permissions("update")
 async def on_create_group_role(request):
     """User can create such as moderator, manager, etc."""
     role = await Role.create(
@@ -166,6 +166,16 @@ async def on_create_group_role(request):
         permissions=f"group-{request.args.get("id")}:{request.form.get("permissions")}",
     )
     return json("Group role created.", role.json)
+
+
+@group_bp.delete("role")
+@require_permissions("update")
+async def on_delete_group_role(request):
+    """User can delete roles such as moderator, manager, etc."""
+    role = await Role.get(id=request.args.get("id"), permissions__startswith=f"group-{request.args.get("id")}", deleted=False)
+    role.deleted = True
+    await role.save(update_fields=["deleted"])
+    return json("Group role deleted.", role.json)
 
 
 @group_bp.put("role/assign")
