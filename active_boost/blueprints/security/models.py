@@ -58,5 +58,5 @@ class Role(BaseModel):
             "id": self.id,
             "name": self.name,
             "description": self.description,
-            "permissions": self.permissions.split(":")[1],
+            "permissions": self.permissions,
         }
