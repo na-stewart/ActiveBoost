@@ -172,7 +172,11 @@ async def on_create_group_role(request):
 @require_permissions("update")
 async def on_delete_group_role(request):
     """User can delete roles such as moderator, manager, etc."""
-    role = await Role.get(id=request.args.get("id"), permissions__startswith=f"group-{request.args.get("id")}", deleted=False)
+    role = await Role.get(
+        id=request.args.get("id"),
+        permissions__startswith=f"group-{request.args.get("id")}",
+        deleted=False,
+    )
     role.deleted = True
     await role.save(update_fields=["deleted"])
     return json("Group role deleted.", role.json)
