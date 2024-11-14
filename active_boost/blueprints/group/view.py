@@ -275,9 +275,7 @@ async def on_update_challenge(request):
     challenge.reward = request.form.get("reward")
     challenge.threshold = request.form.get("threshold")
     challenge.threshold_type = request.form.get("threshold-type")
-    challenge.expiration_date = datetime.datetime.strptime(
-        request.form.get("expiration-date"), "%Y-%m-%d %H:%M:%S"
-    )
+    challenge.expiration_date = get_expiration_date(int(request.form.get("period")))
     await challenge.save(
         update_fields=[
             "title",
