@@ -3,6 +3,7 @@ import time
 import jwt
 from httpx_oauth.oauth2 import OAuth2
 from sanic import Blueprint, redirect, Sanic
+from tortoise.exceptions import IntegrityError
 
 from active_boost.blueprints.security.models import Account
 from active_boost.common.exceptions import AnonymousUserError, AuthorizationError
@@ -59,7 +60,7 @@ async def on_oauth_login(request):
                 "sleep",
                 "temperature",
                 "weight",
-                "cardio_fitness"
+                "cardio_fitness",
             ],
         )
         response = redirect(authorization_url)
@@ -100,11 +101,14 @@ def initialize_security(app: Sanic) -> None:
             request.ctx.token_info = jwt.decode(
                 request.cookies.get("tkn_activb"), config.SECRET, algorithms=["HS256"]
             )
-            request.ctx.account = (
-                await Account.get_or_create(
+            try:
+                account = await Account.create(
                     user_id=request.ctx.token_info["user_id"],
+                    username=request.ctx.token_info["user_id"],
                 )
-            )[0]
+            except IntegrityError:
+                account = await Account.get(user_id=request.ctx.token_info["user_id"])
+            request.ctx.account = account
             if request.ctx.account.disabled or request.ctx.account.deleted:
                 raise AuthorizationError("Account is disabled.")
             if time.time() > request.ctx.token_info["expires_at"]:
