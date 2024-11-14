@@ -4,7 +4,7 @@ from sanic import Blueprint
 from sanic.utils import str_to_bool
 
 from active_boost.blueprints.group.models import Group, Challenge
-from active_boost.blueprints.security.common import require_permissions, assign_role
+from active_boost.blueprints.security.common import require_permissions
 from active_boost.blueprints.security.models import Role, Account
 from active_boost.common.exceptions import (
     ChallengeExpiredError,
@@ -148,33 +148,35 @@ async def on_get_group_roles(request):
     return json("Group roles retrieved.", [role.json for role in roles])
 
 
-@group_bp.put("roles/assign")
+@group_bp.post("role")
+@require_permissions("moderate")
+async def on_create_group_role(request):
+    """User can create such as moderator, manager, etc."""
+    role = await Role.create(
+        name=request.form.get("name"),
+        description=request.form.get("description"),
+        permissions=f"group-{request.args.get("id"),}:{request.form.get("permissions")}",
+    )
+    return json("Group role created.", role.json)
+
+
+@group_bp.put("role/assign")
 @require_permissions("moderate")
 async def on_permit_group_user(request):
-    """User can create new role or add role to another account such as moderator, manager, etc."""
-    if request.args.get("role"):
-        account_being_permitted = await Account.get(
-            id=request.args.get("account"), deleted=False
-        )
-        role = await Role.get(
-            permissions__startswith=f"group-{request.args.get("id")}",
-            id=request.args.get("role"),
-            deleted=False,
-        )
-        await account_being_permitted.roles.add(role)
-    else:
-        role = await assign_role(
-            request.form.get("name"),
-            request.args.get("id"),
-            request.ctx.account,
-            request.form.get("permissions"),
-            request.form.get("description"),
-        )
-
+    """User can add role to another account such as moderator, manager, etc."""
+    account_being_permitted = await Account.get(
+        id=request.args.get("account"), deleted=False
+    )
+    role = await Role.get(
+        permissions__startswith=f"group-{request.args.get("id")}",
+        id=request.args.get("role"),
+        deleted=False,
+    )
+    await account_being_permitted.roles.add(role)
     return json("Group participant assigned role.", role.json)
 
 
-@group_bp.put("roles/prohibit")
+@group_bp.put("role/prohibit")
 @require_permissions("moderate")
 async def on_prohibit_group_user(request):
     """User can remove role from another account such as moderator, manager, etc."""
