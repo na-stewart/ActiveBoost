@@ -231,7 +231,6 @@ async def on_create_challenge(request):
         title=request.form.get("title"),
         description=request.form.get("description"),
         reward=request.form.get("reward"),
-        penalty=request.form.get("penalty"),
         threshold=request.form.get("threshold"),
         threshold_type=request.form.get("threshold-type"),
         expiration_date=get_expiration_date(int(request.form.get("period"))),

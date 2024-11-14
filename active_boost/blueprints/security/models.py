@@ -17,7 +17,7 @@ class Account(BaseModel):
 
     bio: str = fields.TextField(null=True)
     user_id: str = fields.CharField(max_length=255, unique=True)
-    username: str = fields.CharField(max_length=255, unique=True)
+    username: str = fields.CharField(max_length=255)
     roles: fields.ManyToManyRelation["Role"] = fields.ManyToManyField(
         "models.Role", through="account_role"
     )
