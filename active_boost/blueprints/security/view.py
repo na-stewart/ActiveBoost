@@ -102,13 +102,12 @@ def initialize_security(app: Sanic) -> None:
                 request.cookies.get("tkn_activb"), config.SECRET, algorithms=["HS256"]
             )
             try:
-                account = await Account.create(
+                request.ctx.account = await Account.create(
                     user_id=request.ctx.token_info["user_id"],
                     username=request.ctx.token_info["user_id"],
                 )
             except IntegrityError:
-                account = await Account.get(user_id=request.ctx.token_info["user_id"])
-            request.ctx.account = account
+                request.ctx.account = await Account.get(user_id=request.ctx.token_info["user_id"])
             if request.ctx.account.disabled or request.ctx.account.deleted:
                 raise AuthorizationError("Account is disabled.")
             if time.time() > request.ctx.token_info["expires_at"]:
