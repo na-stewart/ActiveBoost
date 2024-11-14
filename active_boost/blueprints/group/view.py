@@ -163,7 +163,7 @@ async def on_create_group_role(request):
     role = await Role.create(
         name=request.form.get("name"),
         description=request.form.get("description"),
-        permissions=f"group-{request.args.get("id"),}:{request.form.get("permissions")}",
+        permissions=f"group-{request.args.get("id")}:{request.form.get("permissions")}",
     )
     return json("Group role created.", role.json)
 
