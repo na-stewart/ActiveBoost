@@ -83,7 +83,7 @@ async def on_get_sleep(request):
 @fitbit_bp.get("temperature")
 async def on_get_temperature(request):
     data = await http_client.get(
-        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/skin/date/{request.args.get("start")}/"
+        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/temp/skin/date/{request.args.get("start")}/"
         f"{request.args.get("end")}.json",
         auth=BearerAuth(request.ctx.token_info["access_token"]),
     )
