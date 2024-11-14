@@ -1,5 +1,9 @@
+import traceback
+from json import JSONDecodeError
+
 from sanic import Blueprint
 
+from active_boost.common.exceptions import AuthorizationError
 from active_boost.common.models import BearerAuth
 from active_boost.common.util import json, http_client, activity_resource_options
 
@@ -107,6 +111,7 @@ async def on_get_fitness_score(request):
         f"{request.args.get("end")}.json",
         auth=BearerAuth(request.ctx.token_info["access_token"]),
     )
+    print(data.text)
     return json("Fitness score log retrieved.", data.json())
 
 
@@ -140,3 +145,9 @@ async def on_get_body(request):
         auth=BearerAuth(request.ctx.token_info["access_token"]),
     )
     return json("Body log retrieved.", data.json())
+
+
+@fitbit_bp.exception(JSONDecodeError)
+async def fitbit_permissions_catcher(request, e):
+    traceback.print_exc()
+    raise AuthorizationError("Unauthorized to read this Fitbit resource.")

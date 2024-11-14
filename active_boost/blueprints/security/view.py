@@ -59,6 +59,7 @@ async def on_oauth_login(request):
                 "sleep",
                 "temperature",
                 "weight",
+                "cardio_fitness"
             ],
         )
         response = redirect(authorization_url)
