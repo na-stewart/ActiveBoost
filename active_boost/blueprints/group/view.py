@@ -152,15 +152,16 @@ async def on_get_group_roles(request):
 @require_permissions("moderate")
 async def on_permit_group_user(request):
     """User can create new role or add role to another account such as moderator, manager, etc."""
-    account_being_permitted = await Account.get(
-        id=request.args.get("account"), deleted=False
-    )
     if request.args.get("role"):
+        account_being_permitted = await Account.get(
+            id=request.args.get("account"), deleted=False
+        )
         role = await Role.get(
             permissions__startswith=f"group-{request.args.get("id")}",
             id=request.args.get("role"),
             deleted=False,
         )
+        await account_being_permitted.roles.add(role)
     else:
         role = await assign_role(
             request.form.get("name"),
@@ -169,7 +170,7 @@ async def on_permit_group_user(request):
             request.form.get("permissions"),
             request.form.get("description"),
         )
-    await account_being_permitted.roles.add(role)
+
     return json("Group participant assigned role.", role.json)
 
 
