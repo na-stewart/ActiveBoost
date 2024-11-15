@@ -62,7 +62,7 @@ async def on_get_group_leaderboard(request):
                 "points": member_balance,
             }
         )
-        leaderboard.sort(key=lambda x: x["balance"], reverse=True)
+        leaderboard.sort(key=lambda x: x["points"], reverse=True)
     return json("Leaderboard retrieved.", leaderboard)
 
 
