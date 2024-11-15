@@ -307,7 +307,7 @@ async def on_join_challenge(request):
     """Join challenge and be added to its participants list."""
     challenge = await Challenge.get_from_group_and_member(request, request.ctx.account)
     await challenge.participants.add(request.ctx.account)
-    return json("Challenge joined", challenge.json)
+    return json("Challenge joined.", challenge.json)
 
 
 @challenge_bp.put("kick")
