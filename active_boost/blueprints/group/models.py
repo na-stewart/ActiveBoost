@@ -80,7 +80,7 @@ class Challenge(BaseModel):
         challenger (ForeignKeyRelation["Account"]): The account that issued the challenge. Can be null if not set. Foreign key to the Account model.
     """
 
-    title: str = fields.CharField(unique=True, max_length=255)
+    title: str = fields.CharField(max_length=255)
     description: str = fields.TextField()
     reward: int = fields.IntField()
     threshold = fields.IntField()

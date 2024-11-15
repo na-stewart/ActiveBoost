@@ -84,16 +84,6 @@ async def on_get_sleep(request):
     return json("Sleep log retrieved.", data.json())
 
 
-@fitbit_bp.get("temperature")
-async def on_get_temperature(request):
-    data = await http_client.get(
-        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/temp/skin/date/{request.args.get("start")}/"
-        f"{request.args.get("end")}.json",
-        auth=BearerAuth(request.ctx.token_info["access_token"]),
-    )
-    return json("Temperature log retrieved.", data.json())
-
-
 @fitbit_bp.get("spo2")
 async def on_get_spo2(request):
     data = await http_client.get(

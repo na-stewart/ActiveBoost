@@ -1,5 +1,3 @@
-import datetime
-
 from sanic import Blueprint
 from sanic.utils import str_to_bool
 
@@ -143,7 +141,10 @@ async def on_kick_group_member(request):
     for role in roles:
         await account.roles.remove(role)
     await group.members.remove(account)
-    return json("Member kicked from group.", group.json)
+    return json(
+        "Member kicked from group.",
+        {"account_kicked": account.json, "group": group.json},
+    )
 
 
 @group_bp.get("roles")
@@ -172,13 +173,10 @@ async def on_create_group_role(request):
 @require_permissions("update")
 async def on_delete_group_role(request):
     """User can delete roles such as moderator, manager, etc."""
-    role = await Role.get(
+    role = await Role.filter(
         id=request.args.get("role"),
         permissions__startswith=f"group-{request.args.get("id")}",
-        deleted=False,
-    )
-    role.deleted = True
-    await role.save(update_fields=["deleted"])
+    ).delete()
     return json("Group role deleted.", role.json)
 
 
@@ -192,7 +190,6 @@ async def on_permit_group_user(request):
     role = await Role.get(
         permissions__startswith=f"group-{request.args.get("id")}",
         id=request.args.get("role"),
-        deleted=False,
     )
     await account_being_permitted.roles.add(role)
     return json("Group participant assigned role.", role.json)
@@ -208,7 +205,6 @@ async def on_prohibit_group_user(request):
     role = await Role.get(
         permissions__startswith=f"group-{request.args.get("id")}",
         id=request.args.get("role"),
-        deleted=False,
     )
     await account_being_prohibited.roles.remove(role)
     return json("Group participant role removed.", role.json)
@@ -315,7 +311,10 @@ async def on_kick_challenge_participant(request):
     account = await Account.get(id=request.args.get("account"), deleted=False)
     await challenge.participants.remove(account)
     await challenge.finishers.remove(account)
-    return json("Participant kicked from challenge.", challenge.json)
+    return json(
+        "Participant kicked from challenge.",
+        {"account_kicked": account.json, "challenge": challenge.json},
+    )
 
 
 @challenge_bp.put("redeem")
