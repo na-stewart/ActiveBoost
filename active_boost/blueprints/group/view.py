@@ -193,7 +193,10 @@ async def on_permit_group_user(request):
         id=request.args.get("role"),
     )
     await account_being_permitted.roles.add(role)
-    return json("Group participant assigned role.", role.json)
+    return json(
+        "Group member assigned role.",
+        {"member": account_being_permitted.json, "role": role.json},
+    )
 
 
 @group_bp.put("role/prohibit")
@@ -208,7 +211,10 @@ async def on_prohibit_group_user(request):
         id=request.args.get("role"),
     )
     await account_being_prohibited.roles.remove(role)
-    return json("Group participant role removed.", role.json)
+    return json(
+        "Group member role removed.",
+        {"member": account_being_prohibited.json, "role": role.json},
+    )
 
 
 @challenge_bp.get("you")
