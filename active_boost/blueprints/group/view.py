@@ -178,7 +178,7 @@ async def on_delete_group_role(request):
         id=request.args.get("role"),
         permissions__startswith=f"group-{request.args.get("id")}",
     ).delete()
-    return json("Group role deleted.", role.json)
+    return json("Group role deleted.", None)
 
 
 @group_bp.put("role/assign")
