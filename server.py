@@ -1,6 +1,6 @@
 import traceback
 
-from sanic import Sanic, json
+from sanic import Sanic, json, redirect
 from tortoise.contrib.sanic import register_tortoise
 
 from active_boost.blueprints.security.view import initialize_security
@@ -10,8 +10,10 @@ from active_boost.common.util import config
 app = Sanic("active_boost")
 app.blueprint(api)
 
-# app.static("/", "static", name="activb_static")
-# app.static("/", "static/index.html", name="activb_index")
+
+@app.get("/")
+def on_index(request):
+    return redirect("https://documenter.getpostman.com/view/26504282/2sAY55ZxRC")
 
 
 @app.exception(Exception)
