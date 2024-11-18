@@ -101,28 +101,7 @@ async def on_get_fitness_score(request):
         f"{request.args.get("end")}.json",
         auth=BearerAuth(request.ctx.token_info["access_token"]),
     )
-    print(data.text)
     return json("Fitness score log retrieved.", data.json())
-
-
-@fitbit_bp.get("heart-rate-variability")
-async def on_get_heart_rate_variability(request):
-    data = await http_client.get(
-        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/hrv/date/{request.args.get("start")}/"
-        f"{request.args.get("end")}.json",
-        auth=BearerAuth(request.ctx.token_info["access_token"]),
-    )
-    return json("Heart rate variability log retrieved.", data.json())
-
-
-@fitbit_bp.get("breathing-rate")
-async def on_get_breathing_rate(request):
-    data = await http_client.get(
-        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/br/date/{request.args.get("start")}/"
-        f"{request.args.get("end")}.json",
-        auth=BearerAuth(request.ctx.token_info["access_token"]),
-    )
-    return json("Breathing rate log retrieved.", data.json())
 
 
 @fitbit_bp.get("body")
