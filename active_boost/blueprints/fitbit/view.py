@@ -25,7 +25,7 @@ async def on_get_activity_weekly(request):
 
 
 @fitbit_bp.get("activity/weekly")
-async def on_get_activity_log(request):
+async def on_get_activity_log_weekly(request):
     if request.args.get("type") not in activity_resource_options:
         raise ValueError(f"Log type must be {", ".join(activity_resource_options)}.")
     data = await http_client.get(
