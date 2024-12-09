@@ -1,3 +1,4 @@
+import datetime
 import traceback
 from json import JSONDecodeError
 
@@ -13,12 +14,35 @@ fitbit_bp = Blueprint("fitbit", url_prefix="fitbit")
 # https://dev.fitbit.com/build/reference/web-api/
 
 
+@fitbit_bp.get("activity/list/weekly")
+async def on_get_activity_weekly(request):
+    data = await http_client.get(
+        f"https://api.fitbit.com/1/user/{request.ctx.o_auth.get("user_id")}/activities/list.json?"
+        f"afterDate={(datetime.datetime.now(datetime.UTC) - datetime.timedelta(weeks=1)).strftime('%Y-%m-%d')}&sort=desc&limit=20&offset=0",
+        auth=BearerAuth(request.ctx.o_auth["access_token"]),
+    )
+    return json("Activity log retrieved.", data.json())
+
+
+@fitbit_bp.get("activity/weekly")
+async def on_get_activity_log(request):
+    if request.args.get("type") not in activity_resource_options:
+        raise ValueError(f"Log type must be {", ".join(activity_resource_options)}.")
+    data = await http_client.get(
+        f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/activities/{request.args.get("type")}/date/"
+        f"{(datetime.datetime.now(datetime.UTC) - datetime.timedelta(weeks=1)).strftime('%Y-%m-%d')}/"
+        f"{datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d')}.json",
+        auth=BearerAuth(request.ctx.token_info["access_token"]),
+    )
+    return json("Activity log retrieved.", data.json())
+
+
 @fitbit_bp.get("activity/list")
 async def on_get_activity_list(request):
     data = await http_client.get(
         f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/activities/list.json?"
         f"{f"afterDate={request.args.get("after")}" if request.args.get("after") else f"beforeDate={request.args.get("before")}"}"
-        "&sort=asc&limit=100&offset=0",
+        "&sort=desc&limit=100&offset=0",
         auth=BearerAuth(request.ctx.token_info["access_token"]),
     )
     return json("Activity log retrieved.", data.json())
