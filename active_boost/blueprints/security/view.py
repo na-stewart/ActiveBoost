@@ -1,10 +1,12 @@
+import functools
 import time
 
 import jwt
 from httpx_oauth.oauth2 import OAuth2
-from sanic import Blueprint, redirect, Sanic
+from sanic import Blueprint, redirect, Sanic, Request
 from tortoise.exceptions import IntegrityError
 
+from active_boost.blueprints.group.models import Group
 from active_boost.blueprints.security.models import Account
 from active_boost.common.exceptions import AnonymousUserError, AuthorizationError
 from active_boost.common.util import config, json
@@ -18,6 +20,11 @@ o_auth = OAuth2(
     refresh_token_endpoint="https://api.fitbit.com/oauth2/token",
     token_endpoint_auth_method="client_secret_basic",
 )
+
+
+@security_bp.get("account")
+async def on_get_account(request):
+    return json("Account retrieved.", request.ctx.account.json)
 
 
 @security_bp.put("account")
@@ -112,7 +119,9 @@ def initialize_security(app: Sanic) -> None:
                 )
             if request.ctx.account.disabled or request.ctx.account.deleted:
                 raise AuthorizationError("Account is disabled.")
-            if time.time() > request.ctx.token_info["expires_at"]:
+            if time.time() > request.ctx.token_info[
+                "expires_at"
+            ] and not request.args.get("refresh-token"):
                 request.ctx.token_info = await o_auth.refresh_token(
                     request.ctx.token_info["refresh_token"]
                 )
@@ -131,3 +140,29 @@ def initialize_security(app: Sanic) -> None:
                 jwt.encode(request.ctx.token_info, config.SECRET, algorithm="HS256"),
                 httponly=True,
             )
+
+
+async def require_ownership(request: Request, group_id: int):
+    """Determines if the account is the owner of the group the use is performing an action upon."""
+    group = (
+        await Group.filter(id=group_id, deleted=False).prefetch_related("founder").get()
+    )
+    if request.ctx.account != group.founder:
+        raise AuthorizationError()
+
+
+def requires_ownership(arg=None):
+    """Determines if the account is the owner of the group the use is performing an action upon."""
+
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(request, *args, **kwargs):
+            await require_ownership(
+                request,
+                request.args.get("group") or request.args.get("id"),
+            )
+            return await func(request, *args, **kwargs)
+
+        return wrapper
+
+    return decorator(arg) if callable(arg) else decorator

@@ -2,8 +2,8 @@ from sanic import Blueprint
 from sanic.utils import str_to_bool
 
 from active_boost.blueprints.group.models import Group, Challenge
-from active_boost.blueprints.security.common import require_permissions
-from active_boost.blueprints.security.models import Role, Account
+from active_boost.blueprints.security.models import Account
+from active_boost.blueprints.security.view import requires_ownership
 from active_boost.common.exceptions import (
     ChallengeExpiredError,
     ThresholdNotMetError,
@@ -30,7 +30,6 @@ async def on_get_user_groups(request):
 
 @group_bp.get("members")
 async def on_get_group_members(request):
-    """Retrieves members of a group."""
     group = await Group.get_from_member(request, request.ctx.account)
     members = await group.members.filter(deleted=False).all()
     return json("Group members retrieved.", [member.json for member in members])
@@ -50,16 +49,10 @@ async def on_get_group_leaderboard(request):
             # Has member completed the challenge?
             if await challenge.finishers.filter(id=member.id).exists():
                 member_balance += challenge.reward
-            elif (
-                await challenge.participants.filter(id=member.id).exists()
-                and challenge.has_expired()
-            ):
-                member_balance -= challenge.reward / 4
         leaderboard.append(
             {
-                "id": member.id,
-                "username": member.username,
-                "points": member_balance,
+                "member": member.json,
+                "fitness_points": member_balance,
             }
         )
         leaderboard.sort(key=lambda x: x["points"], reverse=True)
@@ -87,17 +80,11 @@ async def on_create_group(request):
         founder=request.ctx.account,
     )
     await group.members.add(request.ctx.account)
-    founder_role = await Role.create(
-        name="Manager",
-        description="Has complete control over group operations.",
-        permissions=f"group-{group.id}:*",
-    )
-    await request.ctx.account.roles.add(founder_role)
     return json("Group created.", group.json)
 
 
 @group_bp.put("/")
-@require_permissions("update")
+@requires_ownership
 async def on_update_group(request):
     """Update group information if permitted."""
     group = await Group.get(id=request.args.get("id"), deleted=False)
@@ -109,7 +96,7 @@ async def on_update_group(request):
 
 
 @group_bp.delete("/")
-@require_permissions("delete")
+@requires_ownership
 async def on_delete_group(request):
     """Disband group if permitted."""
     group = await Group.get(id=request.args.get("id"), deleted=False)
@@ -131,89 +118,15 @@ async def on_join_group(request):
 
 
 @group_bp.put("kick")
-@require_permissions("moderate")
+@requires_ownership
 async def on_kick_group_member(request):
     """Remove account from group members list."""
     group = await Group.get(id=request.args.get("id"), deleted=False)
     account = await Account.get(id=request.args.get("account"), deleted=False)
-    roles = await Role.filter(
-        permissions__startswith=f"group-{request.args.get("id")}", deleted=False
-    ).all()
-    for role in roles:
-        await account.roles.remove(role)
     await group.members.remove(account)
     return json(
         "Member kicked from group.",
         {"account_kicked": account.json, "group": group.json},
-    )
-
-
-@group_bp.get("roles")
-@require_permissions("moderate")
-async def on_get_group_roles(request):
-    """Retrieve group roles and view details if permitted."""
-    roles = await Role.filter(
-        permissions__startswith=f"group-{request.args.get("id")}", deleted=False
-    ).all()
-    return json("Group roles retrieved.", [role.json for role in roles])
-
-
-@group_bp.post("role")
-@require_permissions("update")
-async def on_create_group_role(request):
-    """User can create such as moderator, manager, etc."""
-    role = await Role.create(
-        name=request.form.get("name"),
-        description=request.form.get("description"),
-        permissions=f"group-{request.args.get("id")}:{request.form.get("permissions")}",
-    )
-    return json("Group role created.", role.json)
-
-
-@group_bp.delete("role")
-@require_permissions("update")
-async def on_delete_group_role(request):
-    """User can delete roles such as moderator, manager, etc."""
-    role = await Role.filter(
-        id=request.args.get("role"),
-        permissions__startswith=f"group-{request.args.get("id")}",
-    ).delete()
-    return json("Group role deleted.", None)
-
-
-@group_bp.put("role/assign")
-@require_permissions("moderate")
-async def on_permit_group_user(request):
-    """User can add role to another account such as moderator, manager, etc."""
-    account_being_permitted = await Account.get(
-        id=request.args.get("account"), deleted=False
-    )
-    role = await Role.get(
-        permissions__startswith=f"group-{request.args.get("id")}",
-        id=request.args.get("role"),
-    )
-    await account_being_permitted.roles.add(role)
-    return json(
-        "Group member assigned role.",
-        {"member": account_being_permitted.json, "role": role.json},
-    )
-
-
-@group_bp.put("role/prohibit")
-@require_permissions("moderate")
-async def on_prohibit_group_user(request):
-    """User can remove role from another account such as moderator, manager, etc."""
-    account_being_prohibited = await Account.get(
-        id=request.args.get("account"), deleted=False
-    )
-    role = await Role.get(
-        permissions__startswith=f"group-{request.args.get("id")}",
-        id=request.args.get("role"),
-    )
-    await account_being_prohibited.roles.remove(role)
-    return json(
-        "Group member role removed.",
-        {"member": account_being_prohibited.json, "role": role.json},
     )
 
 
@@ -234,10 +147,7 @@ async def on_get_challenge_participants(request):
     finishers = await challenge.participants.filter(deleted=False).all()
     return json(
         "Challenge participants retrieved.",
-        {
-            "participants": [participant.json for participant in participants],
-            "finishers": [finisher.json for finisher in finishers],
-        },
+        [participant.json for participant in participants],
     )
 
 
@@ -249,7 +159,7 @@ async def on_get_challenges(request):
 
 
 @challenge_bp.post("/")
-@require_permissions("challenge:create")
+@requires_ownership
 async def on_create_challenge(request):
     """Creates challenge associated with group if creator is in that group."""
     group = await Group.get_from_member(request, request.ctx.account)
@@ -269,7 +179,7 @@ async def on_create_challenge(request):
 
 
 @challenge_bp.put("/")
-@require_permissions("challenge:update")
+@requires_ownership
 async def on_update_challenge(request):
     """Update challenge information if permitted."""
     challenge = await Challenge.get_from_group(request)
@@ -293,7 +203,7 @@ async def on_update_challenge(request):
 
 
 @challenge_bp.delete("/")
-@require_permissions("challenge:delete")
+@requires_ownership
 async def on_delete_challenge(request):
     """Deletes challenge if permitted."""
     challenge = await Challenge.get_from_group(request)
@@ -311,7 +221,7 @@ async def on_join_challenge(request):
 
 
 @challenge_bp.put("kick")
-@require_permissions("moderate")
+@requires_ownership
 async def on_kick_challenge_participant(request):
     """Remove account from challenge participants list."""
     challenge = await Challenge.get_from_group_and_member(request, request.ctx.account)
@@ -330,24 +240,30 @@ async def on_challenge_redeem(request):
     Adds user to challenge finishers list if threshold attempt (e.g., "distance", "steps", "calories") exceeds
     challenge requirements.
     """
-    challenge = await Challenge.get_from_participant(request, request.ctx.account)
+    challenge = await Challenge.get(
+        id=request.args.get("id"),
+        participants__in=[request.ctx.session.bearer],
+        deleted=False,
+    )
     if challenge.has_expired():
+        await challenge.participants.remove(request.ctx.session.bearer)
         raise ChallengeExpiredError()
     else:
         data = await http_client.get(
-            f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/activities/{challenge.threshold_type}/date/"
-            f"{challenge.date_created.strftime("%Y-%m-%d")}/{challenge.date_created.strftime("%Y-%m-%d")}.json",
-            auth=BearerAuth(request.ctx.token_info["access_token"]),
+            f"https://api.fitbit.com/1/user/{request.ctx.o_auth.get("user_id")}/activities/{challenge.threshold_type}/date/"
+            f"{challenge.date_created.strftime("%Y-%m-%d")}/{challenge.expiration_date.strftime("%Y-%m-%d")}.json",
+            auth=BearerAuth(request.ctx.o_auth.get("access_token")),
         )
         activity_total = sum(
-            int(activity["value"])
+            round(float(activity["value"]))
             for activity in data.json()[f"activities-{challenge.threshold_type}"]
         )
         if activity_total > challenge.threshold:
-            await challenge.finishers.add(request.ctx.account)
+            await challenge.participants.remove(request.ctx.session.bearer)
+            await challenge.finishers.add(request.ctx.session.bearer)
             return json("Challenge redeemed.", challenge.json)
         else:
             raise ThresholdNotMetError(
-                f"You are still {challenge.threshold - activity_total} {challenge.threshold_type} away "
-                "from meeting the threshold!"
+                f"You are still {challenge.threshold - activity_total} "
+                f"{"km" if challenge.threshold_type == "distance" else challenge.threshold_type} away from meeting the threshold!"
             )

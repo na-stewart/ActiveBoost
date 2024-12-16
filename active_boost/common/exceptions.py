@@ -5,7 +5,7 @@ from active_boost.common.util import json, activity_resource_options
 
 class ActiveBoostError(SanicException):
     """
-    General Active Boost exception.
+    General ActiveBoost exception.
     """
 
     def __init__(self, message: str, code: int = 400):
