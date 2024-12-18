@@ -116,7 +116,7 @@ async def on_join_group(request):
     return json("Group joined.", group.json)
 
 
-@group_bp.put("join")
+@group_bp.put("leave")
 async def on_leave_group(request):
     """Join group and be added to its members list."""
     group = await Group.get_from_member(request, request.ctx.account)
