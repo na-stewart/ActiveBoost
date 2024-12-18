@@ -116,6 +116,14 @@ async def on_join_group(request):
     return json("Group joined.", group.json)
 
 
+@group_bp.put("join")
+async def on_leave_group(request):
+    """Join group and be added to its members list."""
+    group = await Group.get_from_member(request, request.ctx.account)
+    await group.members.remove(request.ctx.account)
+    return json("Group left.", group.json)
+
+
 @group_bp.put("kick")
 @requires_ownership
 async def on_kick_group_member(request):
@@ -220,15 +228,6 @@ async def on_join_challenge(request):
     challenge = await Challenge.get_from_group_and_member(request, request.ctx.account)
     await challenge.participants.add(request.ctx.account)
     return json("Challenge joined.", challenge.json)
-
-
-@challenge_bp.put("leave")
-async def on_join_challenge(request):
-    """Join challenge and be added to its participants list."""
-    challenge = await Challenge.get_from_group_and_member(request, request.ctx.account)
-    await challenge.participants.remove(request.ctx.account)
-    return json("Challenge left.", challenge.json)
-
 
 @challenge_bp.put("kick")
 @requires_ownership
