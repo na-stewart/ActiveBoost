@@ -55,7 +55,7 @@ async def on_get_group_leaderboard(request):
                 "fitness_points": member_balance,
             }
         )
-        leaderboard.sort(key=lambda x: x["points"], reverse=True)
+        leaderboard.sort(key=lambda x: x["fitness_points"], reverse=True)
     return json("Leaderboard retrieved.", leaderboard)
 
 
@@ -109,7 +109,6 @@ async def on_delete_group(request):
 async def on_join_group(request):
     """Join group and be added to its members list."""
     group = await Group.get(
-        id=request.args.get("id"),
         invite_code=request.args.get("invite-code"),
         deleted=False,
     )
@@ -186,7 +185,10 @@ async def on_update_challenge(request):
     challenge.title = request.form.get("title")
     challenge.description = request.form.get("description")
     challenge.reward = request.form.get("reward")
-    challenge.threshold = request.form.get("threshold")
+    if request.form.get("threshold-type") not in activity_resource_options:
+        raise InvalidThresholdTypeError()
+    else:
+        challenge.threshold = request.form.get("threshold")
     challenge.threshold_type = request.form.get("threshold-type")
     challenge.expiration_date = get_expiration_date(int(request.form.get("period")))
     await challenge.save(
@@ -220,6 +222,14 @@ async def on_join_challenge(request):
     return json("Challenge joined.", challenge.json)
 
 
+@challenge_bp.put("leave")
+async def on_join_challenge(request):
+    """Join challenge and be added to its participants list."""
+    challenge = await Challenge.get_from_group_and_member(request, request.ctx.account)
+    await challenge.participants.remove(request.ctx.account)
+    return json("Challenge left.", challenge.json)
+
+
 @challenge_bp.put("kick")
 @requires_ownership
 async def on_kick_challenge_participant(request):
@@ -240,27 +250,23 @@ async def on_challenge_redeem(request):
     Adds user to challenge finishers list if threshold attempt (e.g., "distance", "steps", "calories") exceeds
     challenge requirements.
     """
-    challenge = await Challenge.get(
-        id=request.args.get("id"),
-        participants__in=[request.ctx.session.bearer],
-        deleted=False,
-    )
+    challenge = await Challenge.get_from_participant(request, request.ctx.account)
     if challenge.has_expired():
-        await challenge.participants.remove(request.ctx.session.bearer)
+        await challenge.participants.remove(request.ctx.account)
         raise ChallengeExpiredError()
     else:
         data = await http_client.get(
-            f"https://api.fitbit.com/1/user/{request.ctx.o_auth.get("user_id")}/activities/{challenge.threshold_type}/date/"
+            f"https://api.fitbit.com/1/user/{request.ctx.account.user_id}/activities/{challenge.threshold_type}/date/"
             f"{challenge.date_created.strftime("%Y-%m-%d")}/{challenge.expiration_date.strftime("%Y-%m-%d")}.json",
-            auth=BearerAuth(request.ctx.o_auth.get("access_token")),
+            auth=BearerAuth(request.ctx.token_info["access_token"]),
         )
         activity_total = sum(
             round(float(activity["value"]))
             for activity in data.json()[f"activities-{challenge.threshold_type}"]
         )
         if activity_total > challenge.threshold:
-            await challenge.participants.remove(request.ctx.session.bearer)
-            await challenge.finishers.add(request.ctx.session.bearer)
+            await challenge.participants.remove(request.ctx.account)
+            await challenge.finishers.add(request.ctx.account)
             return json("Challenge redeemed.", challenge.json)
         else:
             raise ThresholdNotMetError(
