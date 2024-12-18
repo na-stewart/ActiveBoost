@@ -57,7 +57,4 @@ class AnonymousUserError(ActiveBoostError):
     """
 
     def __init__(self):
-        super().__init__(
-            "Login required, please do so at https://activeboost.na-stewart.com/api/v1/security/login",
-            401,
-        )
+        super().__init__("Login required.", 401)
