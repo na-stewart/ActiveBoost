@@ -229,6 +229,7 @@ async def on_join_challenge(request):
     await challenge.participants.add(request.ctx.account)
     return json("Challenge joined.", challenge.json)
 
+
 @challenge_bp.put("kick")
 @requires_ownership
 async def on_kick_challenge_participant(request):
