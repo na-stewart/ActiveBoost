@@ -6,6 +6,9 @@
   <p align="center">
     Get in shape, together.
   </p>
+  <p align="center">
+    Nicholas Stewart, Jenayah Shearn, Emma Degenhardt, Vidhee Patel, Ziru Xia
+  </p>
 </p>
 
 <!-- TABLE OF CONTENTS -->
@@ -80,5 +83,15 @@ pip3 install -r requirements.txt
 ```
 
 ### Configuration
+
+Database schemas are automatically created when the server is initiated. You can customize the API configuration in order to utilize your own Fitbit API keys and database server within `util.py`
+
+| Key               | Value                            | Description                                                                                                        |
+|-------------------|----------------------------------|--------------------------------------------------------------------------------------------------------------------|
+| **SECRET**        | This is a big secret. Shhhhh     | The secret used for generating and signing JWTs. This should be a string unique to your application. Keep it safe. |
+| **DATABASE_URL**  | sqlite://db.sqlite3              | URL of your instance's database.                                                                                   |
+| **FITBIT_SECRET** | 58e2c6749ba6cb49d4900debf47798b7 | Fitbit API token.                                                                                                  |
+| **FITBIT_CLIENT** | 23PR33                           | Fitbit client ID.           
+
 
 
