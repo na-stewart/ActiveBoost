@@ -14,7 +14,7 @@ class Account(BaseModel):
         disabled (bool): Renders the account unusable.
     """
 
-    bio: str = fields.TextField(null=True)
+    bio: str = fields.TextField(null=True, default="")
     user_id: str = fields.CharField(max_length=255, unique=True)
     username: str = fields.CharField(max_length=255)
     disabled: bool = fields.BooleanField(default=False)
