@@ -91,7 +91,7 @@ Database schemas are automatically created when the server is initiated. You can
 | **SECRET**        | This is a big secret. Shhhhh     | The secret used for generating and signing JWTs. This should be a string unique to your application. Keep it safe. |
 | **DATABASE_URL**  | sqlite://db.sqlite3              | URL of your instance's database.                                                                                   |
 | **FITBIT_SECRET** | 58e2c6749ba6cb49d4900debf47798b7 | Fitbit API token.                                                                                                  |
-| **FITBIT_CLIENT** | 23PR33                           | Fitbit client ID.           
+| **FITBIT_CLIENT** | 23PR33                           | Fitbit client ID.                                                                                                  |
 
 
 
