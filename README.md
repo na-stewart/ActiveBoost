@@ -82,6 +82,8 @@ git clone https://github.com/na-stewart/Activeboost-Mobile
 pip3 install -r requirements.txt
 ```
 
+* Run `server.py` to initiate the API.
+
 ### Configuration
 
 Database schemas are automatically created when the server is initiated. You can customize the API configuration in order to utilize your own Fitbit API keys and database server within `util.py`
