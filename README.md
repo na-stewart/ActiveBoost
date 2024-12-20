@@ -86,7 +86,9 @@ pip3 install -r requirements.txt
 
 ### Configuration
 
-Database schemas are automatically created when the server is initiated. You can customize the API configuration in order to utilize your own Fitbit API keys and database server within `util.py`
+Database schemas are automatically created when the server is initiated. You can customize the configuration within `util.py` in order to utilize your own Fitbit API keys and database server.
+
+You must create your own [Fitbit application and secret key](https://dev.fitbit.com/apps). 
 
 | Key               | Value                            | Description                                                                                                        |
 |-------------------|----------------------------------|--------------------------------------------------------------------------------------------------------------------|
