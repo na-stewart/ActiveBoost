@@ -44,9 +44,9 @@ This design provides a scalable, modular, and secure foundation for interacting 
 ### Screenshots
 
 <div>
-  <img src="https://github.com/na-stewart/Activeboost-Mobile/blob/master/preview2.PNG" alt="Image 2" width="250" height="550">
-  <img src="https://github.com/na-stewart/Activeboost-Mobile/blob/master/preview.PNG" alt="Image 1" width="250" height="550">
-  <img src="https://github.com/na-stewart/Activeboost-Mobile/blob/master/preview3.PNG" alt="Image 3" width="250" height="550">
+  <img src="https://github.com/na-stewart/Activeboost-Mobile/blob/master/preview/preview2.PNG" alt="Image 2" width="250" height="550">
+  <img src="https://github.com/na-stewart/Activeboost-Mobile/blob/master/preview/preview.PNG" alt="Image 1" width="250" height="550">
+  <img src="https://github.com/na-stewart/Activeboost-Mobile/blob/master/preview/preview3.PNG" alt="Image 3" width="250" height="550">
 </div>
 
 <!-- GETTING STARTED -->
