@@ -58,7 +58,7 @@ To get a local copy up and running follow these simple steps.
 
 Download Python.
 
-* [https://developer.android.com/studio](https://www.python.org/)
+* [https://www.python.org/](https://www.python.org/)
 
 Download your IDE of choice, I prefer PyCharm. An alternative to JetBrains is [VSCode](https://code.visualstudio.com/).
 
